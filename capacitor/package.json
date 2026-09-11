@@ -1,0 +1,16 @@
+{
+  "name": "car-service-tracker-android",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "sync": "pnpm --dir .. generate && cap sync android",
+    "open": "cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.5.0",
+    "@capacitor/core": "8.5.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.5.0"
+  }
+}

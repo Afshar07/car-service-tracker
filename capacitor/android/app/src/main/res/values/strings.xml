@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Car Service Tracker</string>
+    <string name="title_activity_main">Car Service Tracker</string>
+    <string name="package_name">com.afshar.carservicetracker</string>
+    <string name="custom_url_scheme">com.afshar.carservicetracker</string>
+    <string name="widget_description">Estimated mileage and remaining distance until service</string>
+</resources>
