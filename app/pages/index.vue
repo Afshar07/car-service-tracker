@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import type { IMileageReading, IServiceSettings } from "~/types/car";
-import { calculateServiceSummary } from "~/utils/mileage";
+import {
+  DEFAULT_MONTHLY_DRIVING_KM,
+  calculateServiceSummary,
+  estimateCurrentMileage,
+} from "~/utils/mileage";
 
 const {
   readings,
@@ -19,8 +23,17 @@ const saving = ref(false);
 const lastServiceMileageInput = ref("");
 const serviceIntervalInput = ref("10000");
 
+const estimatedCurrentMileageKm = computed(() =>
+  estimateCurrentMileage(readings.value[0]),
+);
+const isMileageEstimated = computed(() =>
+  currentMileageKm.value !== undefined
+  && estimatedCurrentMileageKm.value !== undefined
+  && estimatedCurrentMileageKm.value > currentMileageKm.value,
+);
+
 const summary = computed(() =>
-  calculateServiceSummary(currentMileageKm.value, serviceSettings.value, readings.value),
+  calculateServiceSummary(estimatedCurrentMileageKm.value, serviceSettings.value, readings.value),
 );
 
 const statusLabel = computed(() => ({
@@ -42,6 +55,19 @@ function formatNumber(value: number | undefined): string {
 
 function formatDate(value: string | Date): string {
   return new Intl.DateTimeFormat("en", { day: "numeric", month: "short", year: "numeric" }).format(new Date(value));
+}
+
+function formatJalaliDate(value: string | Date): string {
+  const parts = new Intl.DateTimeFormat("fa-IR", {
+    calendar: "persian",
+    numberingSystem: "latn",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date(value));
+  const datePart = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find(part => part.type === type)?.value ?? "";
+  return `${datePart("year")}/${datePart("month")}/${datePart("day")}`;
 }
 
 function openSettings(): void {
@@ -99,10 +125,14 @@ onMounted(load);
           <span v-if="summary.nextServiceMileageKm" class="muted">Next at {{ formatNumber(summary.nextServiceMileageKm) }} km</span>
         </div>
 
-        <div v-if="currentMileageKm !== undefined" class="current-mileage">
-          <span>Current mileage</span>
-          <strong>{{ formatNumber(currentMileageKm) }}</strong>
+        <div v-if="estimatedCurrentMileageKm !== undefined" class="current-mileage">
+          <span>{{ isMileageEstimated ? "Estimated current mileage" : "Current mileage" }}</span>
+          <strong>{{ formatNumber(estimatedCurrentMileageKm) }}</strong>
           <b>km</b>
+          <small v-if="isMileageEstimated" class="current-mileage__basis">
+            Based on {{ formatNumber(DEFAULT_MONTHLY_DRIVING_KM) }} km/month ·
+            Last confirmed at {{ formatNumber(currentMileageKm) }} km
+          </small>
         </div>
         <div v-else class="empty-hero">
           <p class="eyebrow">Start here</p>
@@ -149,6 +179,7 @@ onMounted(load);
             <div>
               <strong>{{ formatNumber(reading.mileageKm) }} km</strong>
               <span>{{ formatDate(reading.recordedAt) }}</span>
+              <span class="history-item__jalali" dir="ltr">{{ formatJalaliDate(reading.recordedAt) }}</span>
               <small v-if="index < readings.length - 1">
                 +{{ formatNumber(reading.mileageKm - readings[index + 1]!.mileageKm) }} km
               </small>
