@@ -1,5 +1,9 @@
 import { defineNuxtConfig } from "nuxt/config";
 
+const buildRevision = process.env.CF_PAGES_COMMIT_SHA
+  ?? process.env.VERCEL_GIT_COMMIT_SHA
+  ?? new Date().toISOString();
+
 export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
   devtools: { enabled: true },
@@ -33,6 +37,7 @@ export default defineNuxtConfig({
       ],
     },
     workbox: {
+      additionalManifestEntries: [{ url: "/", revision: buildRevision }],
       clientsClaim: true,
       navigateFallback: "/",
       globPatterns: ["**/*.{js,css,html,svg,png,woff2,wasm,gz}"],
