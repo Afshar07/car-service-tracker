@@ -9,8 +9,13 @@ interface IProps {
   previousMileageKm?: number;
 }
 
+interface IEmits {
+  save: [reading: IMileageReading];
+  cancel: [];
+}
+
 const props = defineProps<IProps>();
-const emit = defineEmits<{ save: [reading: IMileageReading]; cancel: [] }>();
+const emit = defineEmits<IEmits>();
 
 const imageUrl = ref<string>();
 const detectedMileageKm = ref<number>();
@@ -21,6 +26,7 @@ const processedImageUrl = ref<string>();
 const progress = ref<IOcrProgress>();
 const processing = ref(false);
 const errorMessage = ref("");
+const servicePerformed = ref(false);
 const mileageInputElement = useTemplateRef<HTMLInputElement>("mileageInput");
 
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
@@ -89,6 +95,7 @@ function save(): void {
     id: crypto.randomUUID(),
     mileageKm,
     recordedAt: new Date().toISOString(),
+    servicePerformed: servicePerformed.value,
     ...(detectedMileageKm.value !== undefined && detectedMileageKm.value !== mileageKm
       ? { detectedMileageKm: detectedMileageKm.value }
       : {}),
@@ -167,6 +174,13 @@ onBeforeUnmount(() => {
         <summary>Show raw OCR details</summary>
         <pre>{{ ocrResult.rawText || "(no text detected)" }}</pre>
       </details>
+      <label class="switch-field">
+        <span>
+          <strong>Service completed</strong>
+          <small>Reset the service countdown from this mileage.</small>
+        </span>
+        <input v-model="servicePerformed" type="checkbox" role="switch">
+      </label>
       <p v-for="code in validation.errors" :key="code" class="message message--error">{{ getMileageValidationMessage(code) }}</p>
       <p v-for="code in validation.warnings" :key="code" class="message message--warning">{{ getMileageValidationMessage(code) }}</p>
       <button class="button button--primary button--full" type="button" :disabled="!validation.valid" @click="save">Save confirmed mileage</button>
