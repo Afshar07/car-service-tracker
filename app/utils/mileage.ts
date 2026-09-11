@@ -10,6 +10,8 @@ const MAX_MILEAGE_KM = 9_999_999;
 const LARGE_INCREASE_KM = 10_000;
 const MIN_ESTIMATE_SPAN_DAYS = 7;
 const MILLISECONDS_PER_DAY = 86_400_000;
+const AVERAGE_DAYS_PER_MONTH = 365.2425 / 12;
+export const DEFAULT_MONTHLY_DRIVING_KM = 2_000;
 
 export function validateMileage(
   mileageKm: number,
@@ -61,6 +63,22 @@ export function calculateAverageDailyKm(readings: IMileageReading[]): number | u
 
   if (elapsedDays < MIN_ESTIMATE_SPAN_DAYS || travelledKm <= 0) return undefined;
   return travelledKm / elapsedDays;
+}
+
+export function estimateCurrentMileage(
+  latestReading: IMileageReading | undefined,
+  now = new Date(),
+  monthlyDrivingKm = DEFAULT_MONTHLY_DRIVING_KM,
+): number | undefined {
+  if (!latestReading || monthlyDrivingKm < 0 || !Number.isFinite(monthlyDrivingKm)) return undefined;
+
+  const recordedAt = new Date(latestReading.recordedAt).getTime();
+  const currentTime = now.getTime();
+  if (!Number.isFinite(recordedAt) || !Number.isFinite(currentTime)) return undefined;
+
+  const elapsedDays = Math.max(0, (currentTime - recordedAt) / MILLISECONDS_PER_DAY);
+  const estimatedTravelKm = elapsedDays * monthlyDrivingKm / AVERAGE_DAYS_PER_MONTH;
+  return Math.round(latestReading.mileageKm + estimatedTravelKm);
 }
 
 export function calculateServiceSummary(
