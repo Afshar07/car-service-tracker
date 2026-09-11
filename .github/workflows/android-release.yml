@@ -42,7 +42,7 @@ jobs:
 
       - name: Install Capacitor dependencies
         working-directory: capacitor
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --ignore-workspace --no-frozen-lockfile
 
       - name: Prepare Nuxt types
         run: pnpm exec nuxt prepare
