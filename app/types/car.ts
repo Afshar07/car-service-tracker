@@ -3,6 +3,7 @@ export interface IMileageReading {
   mileageKm: number;
   recordedAt: string;
   detectedMileageKm?: number;
+  servicePerformed?: boolean;
 }
 
 export interface IServiceSettings {
