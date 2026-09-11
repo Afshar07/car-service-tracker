@@ -35,6 +35,17 @@ export function useCarData() {
     );
   }
 
+  async function updateReading(reading: IMileageReading): Promise<void> {
+    await saveMileageReading(reading);
+    readings.value = readings.value
+      .map(current => current.id === reading.id ? reading : current)
+      .sort(
+        (first, second) =>
+          new Date(second.recordedAt).getTime() -
+          new Date(first.recordedAt).getTime(),
+      );
+  }
+
   async function removeReading(id: string): Promise<void> {
     await deleteMileageReading(id);
     readings.value = readings.value.filter((reading) => reading.id !== id);
@@ -54,6 +65,7 @@ export function useCarData() {
     loaded,
     load,
     addReading,
+    updateReading,
     removeReading,
     updateServiceSettings,
   };
