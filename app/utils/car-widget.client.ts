@@ -4,23 +4,36 @@ import type {
   ICarWidgetState,
 } from "~/types/car-widget";
 
-function getWidgetPlugin() {
+const PLUGIN_NAME = "CarWidget";
+
+function getCapacitorBridge(): ICapacitorWidgetBridge | undefined {
   if (!import.meta.client) return undefined;
-  const capacitor = (window as unknown as { Capacitor?: ICapacitorWidgetBridge }).Capacitor;
-  if (!capacitor?.isNativePlatform?.()) return undefined;
-  return capacitor.Plugins?.CarWidget;
+
+  const capacitor = (window as unknown as {
+    Capacitor?: ICapacitorWidgetBridge;
+  }).Capacitor;
+
+  if (
+    !capacitor?.isNativePlatform?.()
+    || !capacitor.isPluginAvailable?.(PLUGIN_NAME)
+    || !capacitor.nativePromise
+  ) {
+    return undefined;
+  }
+
+  return capacitor;
 }
 
 export function isNativeWidgetAvailable(): boolean {
-  return getWidgetPlugin() !== undefined;
+  return getCapacitorBridge() !== undefined;
 }
 
 export async function updateCarWidget(state: ICarWidgetState): Promise<void> {
-  const plugin = getWidgetPlugin();
-  if (!plugin) return;
+  const capacitor = getCapacitorBridge();
+  if (!capacitor?.nativePromise) return;
 
   try {
-    await plugin.update(state);
+    await capacitor.nativePromise<void>(PLUGIN_NAME, "update", state);
   }
   catch (error) {
     console.warn("Could not update the Android car widget.", error);
@@ -28,7 +41,14 @@ export async function updateCarWidget(state: ICarWidgetState): Promise<void> {
 }
 
 export async function requestCarWidgetPin(): Promise<ICarWidgetPinResult> {
-  const plugin = getWidgetPlugin();
-  if (!plugin) return { supported: false, requested: false };
-  return plugin.requestPin();
+  const capacitor = getCapacitorBridge();
+  if (!capacitor?.nativePromise) {
+    return { supported: false, requested: false };
+  }
+
+  return capacitor.nativePromise<ICarWidgetPinResult>(
+    PLUGIN_NAME,
+    "requestPin",
+    {},
+  );
 }
