@@ -47,6 +47,20 @@ export function calculateServiceStatus(
   return remainingKm <= dueSoonKm ? "due-soon" : "on-track";
 }
 
+export function resolveEffectiveServiceSettings(
+  readings: IMileageReading[],
+  settings: IServiceSettings | undefined,
+): IServiceSettings | undefined {
+  const latestServiceReading = readings.find(reading => reading.servicePerformed);
+  if (!latestServiceReading) return settings;
+
+  return {
+    id: "service",
+    lastServiceMileageKm: latestServiceReading.mileageKm,
+    serviceIntervalKm: settings?.serviceIntervalKm ?? 10_000,
+  };
+}
+
 export function calculateAverageDailyKm(readings: IMileageReading[]): number | undefined {
   if (readings.length < 2) return undefined;
   const sorted = [...readings].sort(
@@ -57,8 +71,8 @@ export function calculateAverageDailyKm(readings: IMileageReading[]): number | u
   if (!first || !last) return undefined;
 
   const elapsedDays =
-    (new Date(last.recordedAt).getTime() - new Date(first.recordedAt).getTime()) /
-    MILLISECONDS_PER_DAY;
+    (new Date(last.recordedAt).getTime() - new Date(first.recordedAt).getTime())
+    / MILLISECONDS_PER_DAY;
   const travelledKm = last.mileageKm - first.mileageKm;
 
   if (elapsedDays < MIN_ESTIMATE_SPAN_DAYS || travelledKm <= 0) return undefined;

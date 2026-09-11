@@ -4,7 +4,12 @@ import {
   DEFAULT_MONTHLY_DRIVING_KM,
   calculateServiceSummary,
   estimateCurrentMileage,
+  resolveEffectiveServiceSettings,
 } from "~/utils/mileage";
+import {
+  isNativeWidgetAvailable,
+  requestCarWidgetPin,
+} from "~/utils/car-widget.client";
 
 const {
   readings,
@@ -24,6 +29,8 @@ const saving = ref(false);
 const editingReading = ref<IMileageReading>();
 const lastServiceMileageInput = ref("");
 const serviceIntervalInput = ref("10000");
+const canAddWidget = ref(false);
+const widgetPinMessage = ref("");
 
 const estimatedCurrentMileageKm = computed(() =>
   estimateCurrentMileage(readings.value[0]),
@@ -34,18 +41,9 @@ const isMileageEstimated = computed(() =>
   && estimatedCurrentMileageKm.value > currentMileageKm.value,
 );
 
-const latestServiceReading = computed(() =>
-  readings.value.find(reading => reading.servicePerformed),
+const effectiveServiceSettings = computed<IServiceSettings | undefined>(() =>
+  resolveEffectiveServiceSettings(readings.value, serviceSettings.value),
 );
-const effectiveServiceSettings = computed<IServiceSettings | undefined>(() => {
-  const serviceReading = latestServiceReading.value;
-  if (!serviceReading) return serviceSettings.value;
-  return {
-    id: "service",
-    lastServiceMileageKm: serviceReading.mileageKm,
-    serviceIntervalKm: serviceSettings.value?.serviceIntervalKm ?? 10_000,
-  };
-});
 
 const summary = computed(() =>
   calculateServiceSummary(estimatedCurrentMileageKm.value, effectiveServiceSettings.value, readings.value),
@@ -93,6 +91,14 @@ function openSettings(): void {
   showSettings.value = true;
 }
 
+async function addWidget(): Promise<void> {
+  widgetPinMessage.value = "";
+  const result = await requestCarWidgetPin();
+  widgetPinMessage.value = result.requested
+    ? "Choose where to place the widget on your home screen."
+    : "Your launcher does not support adding widgets from inside the app. Add it from the home-screen widget picker.";
+}
+
 async function saveReading(reading: IMileageReading): Promise<void> {
   saving.value = true;
   await addReading(reading);
@@ -125,7 +131,10 @@ async function confirmDelete(reading: IMileageReading): Promise<void> {
   }
 }
 
-onMounted(load);
+onMounted(async () => {
+  await load();
+  canAddWidget.value = isNativeWidgetAvailable();
+});
 </script>
 
 <template>
@@ -176,6 +185,15 @@ onMounted(load);
         <button class="button button--accent button--full" type="button" @click="showCapture = true">
           <span class="button__icon">＋</span> Add mileage
         </button>
+      </section>
+
+      <section v-if="canAddWidget" class="setup-card widget-card">
+        <div>
+          <strong>Home-screen widget</strong>
+          <p>See your estimated mileage and service countdown without opening the app.</p>
+          <p v-if="widgetPinMessage" class="widget-card__message">{{ widgetPinMessage }}</p>
+        </div>
+        <button class="button button--secondary" type="button" @click="addWidget">Add widget</button>
       </section>
 
       <section v-if="!serviceSettings && currentMileageKm !== undefined" class="setup-card">

@@ -1,0 +1,100 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [feat/android-home-widget]
+    paths:
+      - "app/**"
+      - "capacitor/**"
+      - ".github/workflows/android-release.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-widget-release
+  cancel-in-progress: true
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install PWA dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Capacitor dependencies
+        working-directory: capacitor
+        run: pnpm install --ignore-workspace --no-frozen-lockfile
+
+      - name: Prepare Nuxt types
+        run: pnpm exec nuxt prepare
+
+      - name: Run unit tests
+        run: pnpm test
+
+      - name: Typecheck Nuxt
+        run: pnpm exec nuxt typecheck
+
+      - name: Generate and sync Android app
+        working-directory: capacitor
+        run: pnpm sync
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.14.3"
+
+      - name: Build debug APK
+        working-directory: capacitor/android
+        run: gradle --no-daemon assembleDebug
+
+      - name: Prepare release files
+        id: release
+        env:
+          RELEASE_TAG: android-widget-v0.1.${{ github.run_number }}
+        run: |
+          APK_NAME="car-service-tracker-${RELEASE_TAG}.apk"
+          cp capacitor/android/app/build/outputs/apk/debug/app-debug.apk "${APK_NAME}"
+          sha256sum "${APK_NAME}" > "${APK_NAME}.sha256"
+          echo "tag=${RELEASE_TAG}" >> "${GITHUB_OUTPUT}"
+          echo "apk=${APK_NAME}" >> "${GITHUB_OUTPUT}"
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: car-service-tracker-android
+          path: |
+            ${{ steps.release.outputs.apk }}
+            ${{ steps.release.outputs.apk }}.sha256
+
+      - name: Publish prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          APK_PATH: ${{ steps.release.outputs.apk }}
+        run: |
+          gh release create "${RELEASE_TAG}"             "${APK_PATH}"             "${APK_PATH}.sha256"             --repo "${GITHUB_REPOSITORY}"             --target "${GITHUB_SHA}"             --prerelease             --generate-notes             --title "Android Widget Build ${RELEASE_TAG}"
