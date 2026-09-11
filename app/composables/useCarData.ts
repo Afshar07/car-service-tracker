@@ -9,7 +9,10 @@ import {
 
 export function useCarData() {
   const readings = useState<IMileageReading[]>("mileage-readings", () => []);
-  const serviceSettings = useState<IServiceSettings | undefined>("service-settings", () => undefined);
+  const serviceSettings = useState<IServiceSettings | undefined>(
+    "service-settings",
+    () => undefined,
+  );
   const loaded = useState<boolean>("car-data-loaded", () => false);
 
   const currentMileageKm = computed(() => readings.value[0]?.mileageKm);
@@ -26,7 +29,9 @@ export function useCarData() {
   async function addReading(reading: IMileageReading): Promise<void> {
     await saveMileageReading(reading);
     readings.value = [reading, ...readings.value].sort(
-      (first, second) => new Date(second.recordedAt).getTime() - new Date(first.recordedAt).getTime(),
+      (first, second) =>
+        new Date(second.recordedAt).getTime() -
+        new Date(first.recordedAt).getTime(),
     );
   }
 
@@ -35,10 +40,21 @@ export function useCarData() {
     readings.value = readings.value.filter((reading) => reading.id !== id);
   }
 
-  async function updateServiceSettings(settings: IServiceSettings): Promise<void> {
+  async function updateServiceSettings(
+    settings: IServiceSettings,
+  ): Promise<void> {
     await saveServiceSettings(settings);
     serviceSettings.value = settings;
   }
 
-  return { readings, serviceSettings, currentMileageKm, loaded, load, addReading, removeReading, updateServiceSettings };
+  return {
+    readings,
+    serviceSettings,
+    currentMileageKm,
+    loaded,
+    load,
+    addReading,
+    removeReading,
+    updateServiceSettings,
+  };
 }
