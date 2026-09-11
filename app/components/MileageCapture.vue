@@ -109,7 +109,10 @@ onBeforeUnmount(() => {
         <span>Mileage</span>
         <span class="mileage-field__input"><input v-model="mileageInput" inputmode="numeric" pattern="[0-9]*" autofocus> <b>km</b></span>
       </label>
-      <p v-if="ocrResult" class="helper">OCR confidence: {{ Math.round(ocrResult.confidence) }}%. Check the number before saving.</p>
+      <p v-if="ocrResult" class="helper">
+        {{ ocrResult.method === "seven-segment" ? "Digital display reader" : "OCR" }} confidence:
+        {{ Math.round(ocrResult.confidence) }}%. Check the number before saving.
+      </p>
       <p v-for="code in validation.errors" :key="code" class="message message--error">{{ getMileageValidationMessage(code) }}</p>
       <p v-for="code in validation.warnings" :key="code" class="message message--warning">{{ getMileageValidationMessage(code) }}</p>
       <button class="button button--primary button--full" type="button" :disabled="!validation.valid" @click="save">Save confirmed mileage</button>

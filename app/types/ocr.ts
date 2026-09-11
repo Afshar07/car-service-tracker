@@ -8,6 +8,12 @@ export interface IOcrResult {
   mileageCandidate?: number;
   confidence: number;
   processedImage: Blob;
+  method: "seven-segment" | "tesseract";
+}
+
+export interface ISevenSegmentResult {
+  text: string;
+  confidence: number;
 }
 
 export interface ICropBounds {

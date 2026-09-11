@@ -9,7 +9,7 @@ const props = defineProps<IProps>();
 const emit = defineEmits<{ crop: [image: Blob] }>();
 
 const imageElement = useTemplateRef<HTMLImageElement>("image");
-const bounds = reactive<ICropBounds>({ xPercent: 10, yPercent: 54, widthPercent: 80, heightPercent: 25 });
+const bounds = reactive<ICropBounds>({ xPercent: 20, yPercent: 28, widthPercent: 60, heightPercent: 24 });
 const cropping = ref(false);
 
 const cropStyle = computed(() => ({
@@ -48,7 +48,7 @@ async function cropImage(): Promise<void> {
 
 <template>
   <section class="cropper">
-    <p class="helper">Move the sliders until the box contains only the odometer digits.</p>
+    <p class="helper">Fit the box tightly around every mileage digit. Keep “km”, the clock, and other symbols outside.</p>
     <div class="cropper__stage">
       <img ref="image" :src="props.imageUrl" alt="Dashboard selected for cropping">
       <div class="cropper__selection" :style="cropStyle" aria-hidden="true" />
