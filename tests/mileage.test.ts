@@ -5,6 +5,7 @@ import {
   calculateNextServiceMileage,
   calculateServiceStatus,
   calculateServiceSummary,
+  estimateCurrentMileage,
   validateMileage,
 } from "~/utils/mileage";
 
@@ -101,5 +102,26 @@ describe("driving-rate estimate", () => {
   it("returns not configured without current mileage or settings", () => {
     expect(calculateServiceSummary(undefined, settings, [])).toEqual({ status: "not-configured" });
     expect(calculateServiceSummary(170_000, undefined, [])).toEqual({ status: "not-configured" });
+  });
+});
+
+
+describe("current mileage estimate", () => {
+  it("adds about 2,000 km for one average month", () => {
+    const reading = createReading(170_370, "2026-08-11T00:00:00.000Z");
+    const averageMonthLater = new Date("2026-09-10T10:29:06.000Z");
+
+    expect(estimateCurrentMileage(reading, averageMonthLater)).toBe(172_370);
+  });
+
+  it("does not subtract mileage when the reading date is in the future", () => {
+    const reading = createReading(170_370, "2026-09-12T00:00:00.000Z");
+
+    expect(estimateCurrentMileage(reading, new Date("2026-09-11T00:00:00.000Z"))).toBe(170_370);
+  });
+
+  it("returns undefined without a valid latest reading", () => {
+    expect(estimateCurrentMileage(undefined)).toBeUndefined();
+    expect(estimateCurrentMileage(createReading(170_370, "invalid"))).toBeUndefined();
   });
 });
