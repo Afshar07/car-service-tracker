@@ -2,6 +2,7 @@ import type {
   ICapacitorWidgetBridge,
   ICarWidgetPinResult,
   ICarWidgetState,
+  ICarWidgetStatus,
 } from "~/types/car-widget";
 
 const PLUGIN_NAME = "CarWidget";
@@ -49,6 +50,19 @@ export async function requestCarWidgetPin(): Promise<ICarWidgetPinResult> {
   return capacitor.nativePromise<ICarWidgetPinResult>(
     PLUGIN_NAME,
     "requestPin",
+    {},
+  );
+}
+
+export async function getCarWidgetStatus(): Promise<ICarWidgetStatus> {
+  const capacitor = getCapacitorBridge();
+  if (!capacitor?.nativePromise) {
+    return { isAdded: false, widgetCount: 0 };
+  }
+
+  return capacitor.nativePromise<ICarWidgetStatus>(
+    PLUGIN_NAME,
+    "getStatus",
     {},
   );
 }

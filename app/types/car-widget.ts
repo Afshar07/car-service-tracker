@@ -12,6 +12,11 @@ export interface ICarWidgetPinResult {
   requested: boolean;
 }
 
+export interface ICarWidgetStatus {
+  isAdded: boolean;
+  widgetCount: number;
+}
+
 export interface ICapacitorWidgetBridge {
   isNativePlatform?: () => boolean;
   isPluginAvailable?: (pluginName: string) => boolean;
