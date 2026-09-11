@@ -21,6 +21,7 @@ const segmentPatterns: Record<string, readonly number[]> = {
   "7": [1, 1, 1, 0, 0, 0, 0],
   "8": [1, 1, 1, 1, 1, 1, 1],
   "9": [1, 1, 1, 1, 0, 1, 1],
+  "1": [0, 1, 1, 0, 0, 0, 0],
 };
 
 function calculateOtsuThreshold(histogram: number[], total: number): number {
@@ -45,6 +46,8 @@ function calculateOtsuThreshold(histogram: number[], total: number): number {
     }
   }
 
+  // Dim red backlight is common in photographs; retain only the brighter
+  // display strokes while still letting the threshold adapt to exposure.
   return Math.max(120, Math.min(235, bestThreshold));
 }
 
@@ -52,6 +55,8 @@ export function createSevenSegmentMask(image: IImagePixels): Uint8Array {
   const histogram = Array.from({ length: 256 }, () => 0);
   for (let index = 0; index < image.data.length; index += 4) {
     const red = image.data[index] ?? 0;
+    const green = image.data[index + 1] ?? 0;
+    const blue = image.data[index + 2] ?? 0;
     histogram[red] = (histogram[red] ?? 0) + 1;
   }
   const threshold = calculateOtsuThreshold(histogram, image.width * image.height);
@@ -62,14 +67,17 @@ export function createSevenSegmentMask(image: IImagePixels): Uint8Array {
     const red = image.data[index] ?? 0;
     const green = image.data[index + 1] ?? 0;
     const blue = image.data[index + 2] ?? 0;
+    // The display is red/orange, rather than merely bright.
     mask[pixel] = red >= threshold && red > green * 1.45 && red > blue * 1.45 ? 1 : 0;
   }
   return mask;
 }
 
 function findDigitRuns(mask: Uint8Array, width: number, height: number): IRun[] {
-  const minimumColumnPixels = Math.max(2, Math.floor(height * 0.02));
-  const bridgeGap = Math.max(3, Math.floor(width * 0.018));
+  const minimumColumnPixels = Math.max(1, Math.floor(height * 0.035));
+  /** Base the gap on the display row height so crop padding cannot bridge a
+   * small gap between the last digit and a nearby unit indicator. */
+  const bridgeGap = Math.max(2, Math.floor(height * 0.035));
   const runs: IRun[] = [];
   let start: number | undefined;
   let emptyColumns = 0;
@@ -80,7 +88,7 @@ function findDigitRuns(mask: Uint8Array, width: number, height: number): IRun[] 
       for (let y = 0; y < height; y += 1) activePixels += mask[y * width + x] ?? 0;
     }
 
-    if (activePixels > minimumColumnPixels) {
+    if (activePixels >= minimumColumnPixels) {
       start ??= x;
       emptyColumns = 0;
     } else if (start !== undefined) {
@@ -93,7 +101,40 @@ function findDigitRuns(mask: Uint8Array, width: number, height: number): IRun[] 
     }
   }
 
-  return runs.filter((run) => run.end >= run.start);
+  const validRuns = runs.filter((run) => run.end >= run.start);
+  if (validRuns.length < 3) return validRuns;
+
+  /**
+   * Unit labels and red reflections can form a column run beside the display.
+   * Unlike a genuine narrow `1`, those marks do not reach the full digit row.
+   */
+  const extents = validRuns.map((run) => {
+    let top = height;
+    let bottom = -1;
+    for (let y = 0; y < height; y += 1) {
+      for (let x = run.start; x <= run.end; x += 1) {
+        if (mask[y * width + x]) {
+          top = Math.min(top, y);
+          bottom = Math.max(bottom, y);
+        }
+      }
+    }
+    return bottom - top + 1;
+  }).sort((first, second) => first - second);
+  const medianExtent = extents[Math.floor(extents.length / 2)] ?? 0;
+  return validRuns.filter((run) => {
+    let top = height;
+    let bottom = -1;
+    for (let y = 0; y < height; y += 1) {
+      for (let x = run.start; x <= run.end; x += 1) {
+        if (mask[y * width + x]) {
+          top = Math.min(top, y);
+          bottom = Math.max(bottom, y);
+        }
+      }
+    }
+    return bottom - top + 1 >= medianExtent * 0.65;
+  });
 }
 
 function regionRatio(
@@ -133,7 +174,7 @@ export function decodeSevenSegmentImage(image: IImagePixels): ISevenSegmentResul
 
   for (const run of runs) {
     const digitWidth = run.end - run.start + 1;
-    if (digitWidth < medianWidth * 0.55) {
+    if (digitWidth < medianWidth * 0.62) {
       digits.push("1");
       confidences.push(0.92);
       continue;
@@ -171,13 +212,15 @@ export function decodeSevenSegmentImage(image: IImagePixels): ISevenSegmentResul
         bestDistance = distance;
       }
     }
-    if (!bestDigit || bestDistance > 0.42) return undefined;
+    if (!bestDigit || bestDistance > 0.34) return undefined;
     digits.push(bestDigit);
     confidences.push(1 - bestDistance);
   }
 
+  const confidence = Math.round(confidences.reduce((sum, value) => sum + value, 0) / confidences.length * 100);
+  if (confidence < 60) return undefined;
   return {
     text: digits.join(""),
-    confidence: Math.round(confidences.reduce((sum, value) => sum + value, 0) / confidences.length * 100),
+    confidence,
   };
 }
