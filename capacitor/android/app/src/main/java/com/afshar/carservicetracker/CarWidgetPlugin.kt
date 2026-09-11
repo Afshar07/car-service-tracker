@@ -51,6 +51,19 @@ class CarWidgetPlugin : Plugin() {
     }
 
     @PluginMethod
+    fun getStatus(call: PluginCall) {
+        val manager = AppWidgetManager.getInstance(context)
+        val provider = ComponentName(context, CarServiceWidgetProvider::class.java)
+        val widgetCount = manager.getAppWidgetIds(provider).size
+
+        call.resolve(
+            JSObject()
+                .put("isAdded", widgetCount > 0)
+                .put("widgetCount", widgetCount),
+        )
+    }
+
+    @PluginMethod
     fun requestPin(call: PluginCall) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             call.resolve(JSObject().put("supported", false).put("requested", false))

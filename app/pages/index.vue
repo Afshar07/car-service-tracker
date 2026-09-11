@@ -7,6 +7,7 @@ import {
   resolveEffectiveServiceSettings,
 } from "~/utils/mileage";
 import {
+  getCarWidgetStatus,
   isNativeWidgetAvailable,
   requestCarWidgetPin,
 } from "~/utils/car-widget.client";
@@ -91,6 +92,22 @@ function openSettings(): void {
   showSettings.value = true;
 }
 
+async function refreshWidgetStatus(): Promise<void> {
+  if (!isNativeWidgetAvailable()) {
+    canAddWidget.value = false;
+    return;
+  }
+
+  const status = await getCarWidgetStatus();
+  canAddWidget.value = !status.isAdded;
+}
+
+function handleVisibilityChange(): void {
+  if (document.visibilityState === "visible") {
+    void refreshWidgetStatus();
+  }
+}
+
 async function addWidget(): Promise<void> {
   widgetPinMessage.value = "";
   const result = await requestCarWidgetPin();
@@ -133,7 +150,12 @@ async function confirmDelete(reading: IMileageReading): Promise<void> {
 
 onMounted(async () => {
   await load();
-  canAddWidget.value = isNativeWidgetAvailable();
+  await refreshWidgetStatus();
+  document.addEventListener("visibilitychange", handleVisibilityChange);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener("visibilitychange", handleVisibilityChange);
 });
 </script>
 
