@@ -10,20 +10,59 @@ const props = defineProps<IProps>();
 const emit = defineEmits<{ crop: [image: Blob] }>();
 
 const imageElement = useTemplateRef<HTMLImageElement>("image");
+const stageElement = useTemplateRef<HTMLDivElement>("stage");
 const bounds = reactive<ICropBounds>({ xPercent: 20, yPercent: 28, widthPercent: 60, heightPercent: 24 });
 const cropping = ref(false);
 const interaction = ref<{ mode: "move" | "resize"; handle?: string; startX: number; startY: number; bounds: ICropBounds }>();
 const hasInteracted = ref(false);
+const layoutVersion = ref(0);
+let resizeObserver: ResizeObserver | undefined;
 
 const MIN_SIZE = 8;
 const CROP_PADDING_RATIO = 0.04;
 
-const cropStyle = computed(() => ({
-  left: `${bounds.xPercent}%`,
-  top: `${bounds.yPercent}%`,
-  width: `${bounds.widthPercent}%`,
-  height: `${bounds.heightPercent}%`,
-}));
+function displayedImageRect(): { left: number; top: number; width: number; height: number } | undefined {
+  layoutVersion.value;
+  const image = imageElement.value;
+  const stage = stageElement.value;
+  if (!image?.naturalWidth || !image.naturalHeight || !stage) return;
+
+  const imageBox = image.getBoundingClientRect();
+  const stageBox = stage.getBoundingClientRect();
+  const scale = Math.min(imageBox.width / image.naturalWidth, imageBox.height / image.naturalHeight);
+  const width = image.naturalWidth * scale;
+  const height = image.naturalHeight * scale;
+
+  return {
+    left: imageBox.left - stageBox.left + (imageBox.width - width) / 2,
+    top: imageBox.top - stageBox.top + (imageBox.height - height) / 2,
+    width,
+    height,
+  };
+}
+
+const cropStyle = computed(() => {
+  const rect = displayedImageRect();
+  if (!rect) return { visibility: "hidden" as const };
+  return {
+    left: `${rect.left + rect.width * bounds.xPercent / 100}px`,
+    top: `${rect.top + rect.height * bounds.yPercent / 100}px`,
+    width: `${rect.width * bounds.widthPercent / 100}px`,
+    height: `${rect.height * bounds.heightPercent / 100}px`,
+  };
+});
+
+function refreshLayout(): void {
+  layoutVersion.value += 1;
+}
+
+onMounted(() => {
+  resizeObserver = new ResizeObserver(refreshLayout);
+  if (stageElement.value) resizeObserver.observe(stageElement.value);
+  if (imageElement.value) resizeObserver.observe(imageElement.value);
+});
+
+onBeforeUnmount(() => resizeObserver?.disconnect());
 
 async function suggestCrop(): Promise<void> {
   if (hasInteracted.value) return;
@@ -74,10 +113,9 @@ async function cropImage(): Promise<void> {
 }
 
 function updatePointer(event: PointerEvent): void {
-  const stage = imageElement.value?.parentElement;
   const active = interaction.value;
-  if (!stage || !active) return;
-  const rect = stage.getBoundingClientRect();
+  const rect = displayedImageRect();
+  if (!rect || !active) return;
   const deltaX = (event.clientX - active.startX) / rect.width * 100;
   const deltaY = (event.clientY - active.startY) / rect.height * 100;
   const start = active.bounds;
@@ -132,8 +170,8 @@ function endInteraction(event: PointerEvent): void {
 <template>
   <section class="cropper">
     <p class="helper">Fit the box tightly around every mileage digit. Keep “km”, the clock, and other symbols outside.</p>
-    <div class="cropper__stage">
-      <img ref="image" :src="props.imageUrl" alt="Dashboard selected for cropping" @load="suggestCrop">
+    <div ref="stage" class="cropper__stage">
+      <img ref="image" :src="props.imageUrl" alt="Dashboard selected for cropping" @load="refreshLayout(); suggestCrop()">
       <div
         class="cropper__selection"
         :style="cropStyle"
