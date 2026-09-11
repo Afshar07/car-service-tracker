@@ -3,14 +3,16 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "nuxt build",
-    "dev": "nuxt dev",
-    "generate": "nuxt generate",
+    "prepare:ocr": "node scripts/prepare-ocr-assets.mjs",
+    "build": "pnpm prepare:ocr && nuxt build",
+    "dev": "pnpm prepare:ocr && nuxt dev",
+    "generate": "pnpm prepare:ocr && nuxt generate",
     "preview": "nuxt preview",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@tesseract.js-data/eng": "^1.0.0",
     "@vite-pwa/nuxt": "^1.0.4",
     "idb": "^8.0.3",
     "nuxt": "^4.1.2",

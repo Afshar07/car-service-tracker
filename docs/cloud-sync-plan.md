@@ -2,7 +2,7 @@
 
 ## Status
 
-Approved for implementation. Deployment and remote database migration remain out of scope until local verification passes.
+Deferred. The user chose IndexedDB as the current storage; cloud synchronization remains out of scope for now.
 
 ## Objective
 

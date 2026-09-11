@@ -148,6 +148,10 @@ export async function recognizeOdometer(
   if (sevenSegmentResult && sevenSegmentResult.confidence >= 65) return sevenSegmentResult;
 
   const worker = await createWorker("eng", 1, {
+    workerPath: "/ocr/worker.min.js",
+    corePath: "/ocr/core",
+    langPath: "/ocr/lang",
+    gzip: true,
     logger(message) {
       onProgress?.({ status: message.status, progress: message.progress });
     },

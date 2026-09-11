@@ -18,16 +18,19 @@ No photos leave the device. The MVP has no backend, account, cloud sync, or AI v
 ## Development
 
 ```bash
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
 
 Run validation with:
 
 ```bash
-npm test
-npm run build
+pnpm test
+pnpm exec nuxt typecheck
+pnpm run build
 ```
+
+The app is local-only: readings remain in IndexedDB and OCR runs in the browser. The first visit (or PWA installation) needs a connection so the app shell and OCR assets can be cached; subsequent use works offline. `pnpm prepare:ocr` copies the Tesseract worker, LSTM WebAssembly cores, and English traineddata into the generated, ignored `public/ocr` directory before dev, generate, and build. The PWA paths assume deployment at the domain root.
 
 ## OCR fixtures
 

@@ -12,10 +12,12 @@ export default defineNuxtConfig({
         { name: "theme-color", content: "#111b17" },
         { name: "description", content: "Track your mileage and know when your car needs service." },
       ],
+      link: [{ rel: "apple-touch-icon", href: "/apple-touch-icon.png" }],
     },
   },
   pwa: {
-    registerType: "autoUpdate",
+    registerType: "prompt",
+    includeAssets: ["apple-touch-icon.png"],
     manifest: {
       name: "Car Service Tracker",
       short_name: "Car Service",
@@ -25,20 +27,15 @@ export default defineNuxtConfig({
       display: "standalone",
       start_url: "/",
       icons: [
-        { src: "/pwa-192x192.svg", sizes: "192x192", type: "image/svg+xml" },
-        { src: "/pwa-512x512.svg", sizes: "512x512", type: "image/svg+xml" },
+        { src: "/pwa-192x192.png", sizes: "192x192", type: "image/png" },
+        { src: "/pwa-512x512.png", sizes: "512x512", type: "image/png" },
+        { src: "/pwa-512x512-maskable.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
       ],
     },
     workbox: {
       navigateFallback: "/",
-      globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
-      runtimeCaching: [
-        {
-          urlPattern: /^https:\/\/cdn\.jsdelivr\.net\//,
-          handler: "CacheFirst",
-          options: { cacheName: "ocr-assets", expiration: { maxEntries: 12, maxAgeSeconds: 31536000 } },
-        },
-      ],
+      globPatterns: ["**/*.{js,css,html,svg,png,woff2,wasm,gz}"],
+      maximumFileSizeToCacheInBytes: 50 * 1024 * 1024,
     },
     devOptions: { enabled: false },
   },
