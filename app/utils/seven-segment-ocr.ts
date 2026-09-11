@@ -61,6 +61,7 @@ export function createSevenSegmentMask(image: IImagePixels): Uint8Array {
   }
   const threshold = calculateOtsuThreshold(histogram, image.width * image.height);
   const mask = new Uint8Array(image.width * image.height);
+  let redPixels = 0;
 
   for (let pixel = 0; pixel < mask.length; pixel += 1) {
     const index = pixel * 4;
@@ -68,7 +69,24 @@ export function createSevenSegmentMask(image: IImagePixels): Uint8Array {
     const green = image.data[index + 1] ?? 0;
     const blue = image.data[index + 2] ?? 0;
     // The display is red/orange, rather than merely bright.
-    mask[pixel] = red >= threshold && red > green * 1.45 && red > blue * 1.45 ? 1 : 0;
+    if (red >= threshold && red > green * 1.45 && red > blue * 1.45) {
+      mask[pixel] = 1;
+      redPixels += 1;
+    }
+  }
+  if (redPixels >= 10) return mask;
+
+  // Blue/white LCDs have no red chroma to identify the display. In that case
+  // retain only bright, near-neutral strokes; the crop detector keeps labels
+  // and gauge markings out of this small analysis region.
+  const neutralThreshold = Math.max(145, threshold);
+  for (let pixel = 0; pixel < mask.length; pixel += 1) {
+    const index = pixel * 4;
+    const red = image.data[index] ?? 0;
+    const green = image.data[index + 1] ?? 0;
+    const blue = image.data[index + 2] ?? 0;
+    const brightness = red * 0.299 + green * 0.587 + blue * 0.114;
+    mask[pixel] = brightness >= neutralThreshold && Math.max(red, green, blue) - Math.min(red, green, blue) <= 120 ? 1 : 0;
   }
   return mask;
 }

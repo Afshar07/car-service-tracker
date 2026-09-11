@@ -25,6 +25,10 @@ const paddedOdometerFixtureCrops: IFixtureCrop[] = [
   { x: 600, y: 315, width: 380, height: 100 },
   { x: 610, y: 325, width: 360, height: 80 },
 ];
+const neutralOdometerTargets: Record<string, IFixtureCrop> = {
+  "81525.png": { x: 760, y: 600, width: 180, height: 65 },
+  "139504.png": { x: 785, y: 705, width: 155, height: 55 },
+};
 
 function readFixtureCrop(crop: IFixtureCrop) {
   const decoded = jpeg.decode(readFileSync(new URL("./fixtures/odometer-170370.jpg", import.meta.url)), { useTArray: true });
@@ -192,6 +196,13 @@ describe("decodeSevenSegmentImage", () => {
       });
     }
     expect(decodeSevenSegmentImage({ data, width, height })?.text).toBe("170370");
+    for (let index = 0; index < data.length; index += 4) {
+      if (data[index]) {
+        data[index + 1] = 255;
+        data[index + 2] = 255;
+      }
+    }
+    expect(decodeSevenSegmentImage({ data, width, height })?.text).toBe("170370");
   });
 
   it("rejects a low-confidence incomplete display", () => {
@@ -211,7 +222,7 @@ describe("suggestInitialCrop", () => {
     expect(suggestInitialCrop({ data: new Uint8ClampedArray(320 * 240 * 4), width: 320, height: 240 })).toBeUndefined();
   });
 
-  it.each(["170370.jpg", "168240.png", "172940.png", "523940.png", "58370.png"])("finds the mileage row in %s", (fixture) => {
+  it.each(["170370.jpg", "168240.png", "172940.png", "523940.png", "58370.png", "81525.png", "139504.png"])("finds the mileage row in %s", (fixture) => {
     const source = fixture.endsWith("jpg")
       ? jpeg.decode(readFileSync(new URL(`./fixtures/odometer-${fixture}`, import.meta.url)), { useTArray: true })
       : PNG.sync.read(readFileSync(new URL(`./fixtures/odometer-${fixture}`, import.meta.url)));
@@ -235,6 +246,16 @@ describe("suggestInitialCrop", () => {
     const y = Math.floor(source.height * crop.yPercent / 100);
     const width = Math.ceil(source.width * crop.widthPercent / 100);
     const height = Math.ceil(source.height * crop.heightPercent / 100);
+    const target = neutralOdometerTargets[fixture];
+    if (target) {
+      const targetCenterX = target.x + target.width / 2;
+      const targetCenterY = target.y + target.height / 2;
+      expect(targetCenterX).toBeGreaterThanOrEqual(x);
+      expect(targetCenterX).toBeLessThanOrEqual(x + width);
+      expect(targetCenterY).toBeGreaterThanOrEqual(y);
+      expect(targetCenterY).toBeLessThanOrEqual(y + height);
+      return;
+    }
     const data = new Uint8ClampedArray(width * height * 4);
     for (let row = 0; row < height; row += 1) for (let column = 0; column < width; column += 1) {
       const sourceIndex = ((y + row) * source.width + x + column) * 4;
