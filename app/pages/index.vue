@@ -13,6 +13,7 @@ const {
   loaded,
   load,
   addReading,
+  updateReading,
   removeReading,
   updateServiceSettings,
 } = useCarData();
@@ -20,6 +21,7 @@ const {
 const showCapture = ref(false);
 const showSettings = ref(false);
 const saving = ref(false);
+const editingReading = ref<IMileageReading>();
 const lastServiceMileageInput = ref("");
 const serviceIntervalInput = ref("10000");
 
@@ -32,8 +34,21 @@ const isMileageEstimated = computed(() =>
   && estimatedCurrentMileageKm.value > currentMileageKm.value,
 );
 
+const latestServiceReading = computed(() =>
+  readings.value.find(reading => reading.servicePerformed),
+);
+const effectiveServiceSettings = computed<IServiceSettings | undefined>(() => {
+  const serviceReading = latestServiceReading.value;
+  if (!serviceReading) return serviceSettings.value;
+  return {
+    id: "service",
+    lastServiceMileageKm: serviceReading.mileageKm,
+    serviceIntervalKm: serviceSettings.value?.serviceIntervalKm ?? 10_000,
+  };
+});
+
 const summary = computed(() =>
-  calculateServiceSummary(estimatedCurrentMileageKm.value, serviceSettings.value, readings.value),
+  calculateServiceSummary(estimatedCurrentMileageKm.value, effectiveServiceSettings.value, readings.value),
 );
 
 const statusLabel = computed(() => ({
@@ -71,7 +86,7 @@ function formatJalaliDate(value: string | Date): string {
 }
 
 function openSettings(): void {
-  lastServiceMileageInput.value = serviceSettings.value?.lastServiceMileageKm.toString()
+  lastServiceMileageInput.value = effectiveServiceSettings.value?.lastServiceMileageKm.toString()
     ?? currentMileageKm.value?.toString()
     ?? "";
   serviceIntervalInput.value = serviceSettings.value?.serviceIntervalKm.toString() ?? "10000";
@@ -84,6 +99,13 @@ async function saveReading(reading: IMileageReading): Promise<void> {
   saving.value = false;
   showCapture.value = false;
   if (!serviceSettings.value) openSettings();
+}
+
+async function saveEditedReading(reading: IMileageReading): Promise<void> {
+  saving.value = true;
+  await updateReading(reading);
+  saving.value = false;
+  editingReading.value = undefined;
 }
 
 async function saveSettings(): Promise<void> {
@@ -177,14 +199,20 @@ onMounted(load);
           <article v-for="(reading, index) in readings" :key="reading.id" class="history-item">
             <span class="history-item__dot" />
             <div>
-              <strong>{{ formatNumber(reading.mileageKm) }} km</strong>
+              <strong>
+                {{ formatNumber(reading.mileageKm) }} km
+                <span v-if="reading.servicePerformed" class="service-badge">Serviced</span>
+              </strong>
               <span>{{ formatDate(reading.recordedAt) }}</span>
               <span class="history-item__jalali" dir="ltr">{{ formatJalaliDate(reading.recordedAt) }}</span>
               <small v-if="index < readings.length - 1">
                 +{{ formatNumber(reading.mileageKm - readings[index + 1]!.mileageKm) }} km
               </small>
             </div>
-            <button class="icon-button icon-button--quiet" type="button" aria-label="Delete reading" @click="confirmDelete(reading)">×</button>
+            <div class="history-item__actions">
+              <button class="icon-button icon-button--quiet" type="button" aria-label="Edit reading" @click="editingReading = reading">✎</button>
+              <button class="icon-button icon-button--quiet" type="button" aria-label="Delete reading" @click="confirmDelete(reading)">×</button>
+            </div>
           </article>
         </div>
         <div v-else class="empty-list">
@@ -198,6 +226,18 @@ onMounted(load);
     <div v-if="showCapture" class="modal" role="dialog" aria-modal="true" aria-label="Add mileage">
       <div class="modal__sheet">
         <MileageCapture :previous-mileage-km="currentMileageKm" @save="saveReading" @cancel="showCapture = false" />
+        <p v-if="saving" class="helper">Saving…</p>
+      </div>
+    </div>
+
+    <div v-if="editingReading" class="modal" role="dialog" aria-modal="true" aria-label="Edit mileage">
+      <div class="modal__sheet">
+        <MileageEditForm
+          :reading="editingReading"
+          :readings="readings"
+          @save="saveEditedReading"
+          @cancel="editingReading = undefined"
+        />
         <p v-if="saving" class="helper">Saving…</p>
       </div>
     </div>
