@@ -44,6 +44,9 @@ jobs:
         working-directory: capacitor
         run: pnpm install --no-frozen-lockfile
 
+      - name: Prepare Nuxt types
+        run: pnpm exec nuxt prepare
+
       - name: Run unit tests
         run: pnpm test
 
