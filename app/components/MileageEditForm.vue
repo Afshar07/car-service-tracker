@@ -26,7 +26,9 @@ const mileageInput = ref(props.reading.mileageKm.toString());
 const recordedAtInput = ref(toLocalDateTime(props.reading.recordedAt));
 const servicePerformed = ref(Boolean(props.reading.servicePerformed));
 
-const parsedMileage = computed(() => Number(mileageInput.value));
+const parsedMileage = computed(() =>
+  mileageInput.value.trim() === "" ? Number.NaN : Number(mileageInput.value),
+);
 const parsedRecordedAt = computed(() => new Date(recordedAtInput.value));
 
 const adjacentReadings = computed(() => {
