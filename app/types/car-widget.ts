@@ -12,14 +12,12 @@ export interface ICarWidgetPinResult {
   requested: boolean;
 }
 
-export interface ICarWidgetPlugin {
-  update(options: ICarWidgetState): Promise<void>;
-  requestPin(): Promise<ICarWidgetPinResult>;
-}
-
 export interface ICapacitorWidgetBridge {
   isNativePlatform?: () => boolean;
-  Plugins?: {
-    CarWidget?: ICarWidgetPlugin;
-  };
+  isPluginAvailable?: (pluginName: string) => boolean;
+  nativePromise?: <TResult>(
+    pluginName: string,
+    methodName: string,
+    options: Record<string, unknown>,
+  ) => Promise<TResult>;
 }
