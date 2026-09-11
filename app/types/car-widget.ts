@@ -18,6 +18,6 @@ export interface ICapacitorWidgetBridge {
   nativePromise?: <TResult>(
     pluginName: string,
     methodName: string,
-    options: Record<string, unknown>,
+    options: object,
   ) => Promise<TResult>;
 }
