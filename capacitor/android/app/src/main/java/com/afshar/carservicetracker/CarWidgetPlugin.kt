@@ -10,25 +10,44 @@ import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
+import kotlin.math.roundToLong
 
 @CapacitorPlugin(name = "CarWidget")
 class CarWidgetPlugin : Plugin() {
     @PluginMethod
     fun update(call: PluginCall) {
+        // JavaScript numbers arrive as Integer or Double. PluginCall.getLong()
+        // accepts only an actual Long, so it silently returned the fallback.
+        val estimatedMileage = call.getDouble("estimatedMileageKm")?.roundToLong() ?: -1L
+        val remainingKm = call.getDouble("remainingKm")?.roundToLong() ?: Long.MIN_VALUE
+        val status = call.getString("status", "not-configured") ?: "not-configured"
+        val updatedAt = call.getString("updatedAt", "") ?: ""
+
         val preferences = context.getSharedPreferences(
             CarServiceWidgetProvider.PREFERENCES_NAME,
             android.content.Context.MODE_PRIVATE,
         )
 
-        preferences.edit()
-            .putLong(CarServiceWidgetProvider.KEY_ESTIMATED_MILEAGE, call.getLong("estimatedMileageKm") ?: -1)
-            .putLong(CarServiceWidgetProvider.KEY_REMAINING_KM, call.getLong("remainingKm") ?: Long.MIN_VALUE)
-            .putString(CarServiceWidgetProvider.KEY_STATUS, call.getString("status", "not-configured"))
-            .putString(CarServiceWidgetProvider.KEY_UPDATED_AT, call.getString("updatedAt", ""))
-            .apply()
+        val persisted = preferences.edit()
+            .putLong(CarServiceWidgetProvider.KEY_ESTIMATED_MILEAGE, estimatedMileage)
+            .putLong(CarServiceWidgetProvider.KEY_REMAINING_KM, remainingKm)
+            .putString(CarServiceWidgetProvider.KEY_STATUS, status)
+            .putString(CarServiceWidgetProvider.KEY_UPDATED_AT, updatedAt)
+            .commit()
+
+        if (!persisted) {
+            call.reject("Could not persist widget state")
+            return
+        }
 
         CarServiceWidgetProvider.updateAll(context)
-        call.resolve()
+        call.resolve(
+            JSObject()
+                .put("estimatedMileageKm", estimatedMileage)
+                .put("remainingKm", remainingKm)
+                .put("status", status)
+                .put("updatedAt", updatedAt),
+        )
     }
 
     @PluginMethod
