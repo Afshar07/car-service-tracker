@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: [feat/android-home-widget]
+    branches: [feat/android-home-widget, fix/android-widget-number-payload]
     paths:
       - "app/**"
       - "capacitor/**"
