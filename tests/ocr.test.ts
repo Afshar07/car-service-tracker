@@ -4,6 +4,7 @@ import jpeg from "jpeg-js";
 import { PNG } from "pngjs";
 import { extractMileageCandidate } from "~/utils/odometer-ocr.client";
 import { decodeSevenSegmentImage } from "~/utils/seven-segment-ocr";
+import { suggestInitialCrop } from "~/utils/initial-crop";
 
 interface IFixtureCrop {
   x: number;
@@ -202,5 +203,47 @@ describe("decodeSevenSegmentImage", () => {
       data[index + 3] = 255;
     }
     expect(decodeSevenSegmentImage({ data, width: 80, height: 40 })).toBeUndefined();
+  });
+});
+
+describe("suggestInitialCrop", () => {
+  it("returns no suggestion when a display row cannot be found reliably", () => {
+    expect(suggestInitialCrop({ data: new Uint8ClampedArray(320 * 240 * 4), width: 320, height: 240 })).toBeUndefined();
+  });
+
+  it.each(["170370.jpg", "168240.png", "172940.png", "523940.png", "58370.png"])("finds the mileage row in %s", (fixture) => {
+    const source = fixture.endsWith("jpg")
+      ? jpeg.decode(readFileSync(new URL(`./fixtures/odometer-${fixture}`, import.meta.url)), { useTArray: true })
+      : PNG.sync.read(readFileSync(new URL(`./fixtures/odometer-${fixture}`, import.meta.url)));
+    const analysisWidth = Math.min(720, source.width);
+    const analysisHeight = Math.round(source.height * analysisWidth / source.width);
+    const analysisData = new Uint8ClampedArray(analysisWidth * analysisHeight * 4);
+    for (let row = 0; row < analysisHeight; row += 1) for (let column = 0; column < analysisWidth; column += 1) {
+      const sourceX = Math.floor(column * source.width / analysisWidth);
+      const sourceY = Math.floor(row * source.height / analysisHeight);
+      const sourceIndex = (sourceY * source.width + sourceX) * 4;
+      const targetIndex = (row * analysisWidth + column) * 4;
+      analysisData[targetIndex] = source.data[sourceIndex]!;
+      analysisData[targetIndex + 1] = source.data[sourceIndex + 1]!;
+      analysisData[targetIndex + 2] = source.data[sourceIndex + 2]!;
+      analysisData[targetIndex + 3] = 255;
+    }
+    const bounds = suggestInitialCrop({ data: analysisData, width: analysisWidth, height: analysisHeight });
+    expect(bounds).toBeDefined();
+    const crop = bounds!;
+    const x = Math.floor(source.width * crop.xPercent / 100);
+    const y = Math.floor(source.height * crop.yPercent / 100);
+    const width = Math.ceil(source.width * crop.widthPercent / 100);
+    const height = Math.ceil(source.height * crop.heightPercent / 100);
+    const data = new Uint8ClampedArray(width * height * 4);
+    for (let row = 0; row < height; row += 1) for (let column = 0; column < width; column += 1) {
+      const sourceIndex = ((y + row) * source.width + x + column) * 4;
+      const targetIndex = (row * width + column) * 4;
+      data[targetIndex] = source.data[sourceIndex]!;
+      data[targetIndex + 1] = source.data[sourceIndex + 1]!;
+      data[targetIndex + 2] = source.data[sourceIndex + 2]!;
+      data[targetIndex + 3] = 255;
+    }
+    expect(decodeSevenSegmentImage({ data, width, height })?.text).toBe(fixture.split(".")[0]);
   });
 });

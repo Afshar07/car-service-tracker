@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ICropBounds } from "~/types/ocr";
+import { suggestInitialCrop } from "~/utils/initial-crop";
 
 interface IProps {
   imageUrl: string;
@@ -12,6 +13,7 @@ const imageElement = useTemplateRef<HTMLImageElement>("image");
 const bounds = reactive<ICropBounds>({ xPercent: 20, yPercent: 28, widthPercent: 60, heightPercent: 24 });
 const cropping = ref(false);
 const interaction = ref<{ mode: "move" | "resize"; handle?: string; startX: number; startY: number; bounds: ICropBounds }>();
+const hasInteracted = ref(false);
 
 const MIN_SIZE = 8;
 const CROP_PADDING_RATIO = 0.04;
@@ -22,6 +24,22 @@ const cropStyle = computed(() => ({
   width: `${bounds.widthPercent}%`,
   height: `${bounds.heightPercent}%`,
 }));
+
+async function suggestCrop(): Promise<void> {
+  if (hasInteracted.value) return;
+  const image = imageElement.value;
+  if (!image?.naturalWidth || !image.naturalHeight) return;
+  const scale = Math.min(1, 720 / image.naturalWidth);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+  canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) return;
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  const data = context.getImageData(0, 0, canvas.width, canvas.height).data;
+  const suggestion = suggestInitialCrop({ data, width: canvas.width, height: canvas.height });
+  if (suggestion && !hasInteracted.value) Object.assign(bounds, suggestion);
+}
 
 async function cropImage(): Promise<void> {
   const image = imageElement.value;
@@ -86,6 +104,7 @@ function updatePointer(event: PointerEvent): void {
 }
 
 function startInteraction(event: PointerEvent, mode: "move" | "resize", handle?: string): void {
+  hasInteracted.value = true;
   const target = event.currentTarget as HTMLElement;
   interaction.value = {
     mode,
@@ -96,6 +115,12 @@ function startInteraction(event: PointerEvent, mode: "move" | "resize", handle?:
   };
   target.setPointerCapture(event.pointerId);
 }
+
+watch(() => props.imageUrl, (next, previous) => {
+  if (next === previous) return;
+  hasInteracted.value = false;
+  Object.assign(bounds, { xPercent: 20, yPercent: 28, widthPercent: 60, heightPercent: 24 });
+});
 
 function endInteraction(event: PointerEvent): void {
   const target = event.currentTarget as HTMLElement;
@@ -108,7 +133,7 @@ function endInteraction(event: PointerEvent): void {
   <section class="cropper">
     <p class="helper">Fit the box tightly around every mileage digit. Keep “km”, the clock, and other symbols outside.</p>
     <div class="cropper__stage">
-      <img ref="image" :src="props.imageUrl" alt="Dashboard selected for cropping">
+      <img ref="image" :src="props.imageUrl" alt="Dashboard selected for cropping" @load="suggestCrop">
       <div
         class="cropper__selection"
         :style="cropStyle"
