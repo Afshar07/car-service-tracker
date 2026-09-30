@@ -21,6 +21,21 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Validate signing secrets
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Missing required signing secret: ${name}"
+              exit 1
+            fi
+          done
+
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -57,16 +72,44 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: "25"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: "8.14.3"
+          gradle-version: "9.1.0"
 
-      - name: Build debug APK
+      - name: Build release APK
         working-directory: capacitor/android
-        run: gradle --no-daemon assembleDebug
+        run: gradle --no-daemon assembleRelease
+
+      - name: Align, sign, and verify release APK
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          umask 077
+          SIGNING_DIR="$(mktemp -d "${RUNNER_TEMP}/android-signing.XXXXXX")"
+          trap 'rm -rf "$SIGNING_DIR"' EXIT
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "${SIGNING_DIR}/release.jks"
+
+          TOOLS="${ANDROID_HOME}/build-tools/35.0.0"
+          APK_DIR="capacitor/android/app/build/outputs/apk/release"
+          "${TOOLS}/zipalign" -P 16 -f 4 \
+            "${APK_DIR}/app-release-unsigned.apk" \
+            "${APK_DIR}/app-release-aligned.apk"
+          "${TOOLS}/apksigner" sign \
+            --ks "${SIGNING_DIR}/release.jks" \
+            --ks-key-alias "$ANDROID_KEY_ALIAS" \
+            --ks-pass env:ANDROID_KEYSTORE_PASSWORD \
+            --key-pass env:ANDROID_KEY_PASSWORD \
+            --out "${APK_DIR}/car-service-tracker-release.apk" \
+            "${APK_DIR}/app-release-aligned.apk"
+          "${TOOLS}/apksigner" verify --verbose \
+            "${APK_DIR}/car-service-tracker-release.apk"
 
       - name: Prepare release files
         id: release
@@ -74,7 +117,7 @@ jobs:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
           APK_NAME="car-service-tracker-${RELEASE_TAG}.apk"
-          cp capacitor/android/app/build/outputs/apk/debug/app-debug.apk "${APK_NAME}"
+          cp capacitor/android/app/build/outputs/apk/release/car-service-tracker-release.apk "${APK_NAME}"
           sha256sum "${APK_NAME}" > "${APK_NAME}.sha256"
           echo "tag=${RELEASE_TAG}" >> "${GITHUB_OUTPUT}"
           echo "apk=${APK_NAME}" >> "${GITHUB_OUTPUT}"
