@@ -41,7 +41,7 @@ pnpm --dir capacitor open
 
 `sync` first runs root static generation, then `cap sync android`; `open` opens Android Studio. There is no separate package build script for the native APK. Inspect `.github/workflows/android-release.yml` before modifying release behavior.
 
-The current workflow uses Node 22, pnpm 10 and JDK 21, runs unit tests/typechecking, generates/syncs the web app, then runs `gradle --no-daemon assembleDebug` in `capacitor/android`. It publishes a debug APK and SHA-256 file as workflow artifacts and a GitHub prerelease, not a production-signed store release. Automatic runs are limited to named feature/fix branches and app/native/workflow path changes; manual dispatch is also available. Do not assume every push triggers an Android build.
+The current workflow uses Node 22, pnpm 10 and JDK 21, runs unit tests/typechecking, generates/syncs the web app, then runs `gradle --no-daemon assembleDebug` in `capacitor/android`. It uploads a debug APK and SHA-256 file as workflow artifacts and assets on the triggering GitHub release, not a production-signed store release. Builds run only when a non-prerelease release targeting `main` is published; checkout builds the release tag's commit. Pushes and manual dispatch do not trigger builds. Concurrency is scoped to each release so different releases do not cancel each other.
 
 The setup guide includes platform regeneration advice for missing wrapper/assets. Inspect the actual missing files before regeneration and preserve Kotlin integration, resources and manifest entries. A wrapper properties file alone does not establish that wrapper scripts/JAR are available.
 
