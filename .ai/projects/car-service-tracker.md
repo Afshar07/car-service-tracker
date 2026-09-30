@@ -4,7 +4,7 @@
 
 The only active project in this workspace: a single-car, kilometer-based mileage log and service countdown. Users capture/upload a dashboard image or enter mileage manually, confirm the reading, and maintain local history and service settings.
 
-Implemented extensions include editing/deleting readings, marking service completion, Gregorian and Jalali history dates, estimated current mileage, and an Android home-screen widget.
+Implemented extensions include editing/deleting readings, marking service completion, Gregorian and Jalali history dates, estimated current mileage, native Android camera/photo-library selection, and an Android home-screen widget. An interactive release helper automates Android versioning and GitHub publication; CI signs release APKs using repository secrets.
 
 ## Ownership boundaries
 
@@ -13,6 +13,7 @@ Implemented extensions include editing/deleting readings, marking service comple
 - `scripts/prepare-ocr-assets.mjs`, `public/`, and `nuxt.config.ts` own local OCR assets and the PWA shell.
 - `tests/` owns Node-based unit and image-fixture coverage. `.github/workflows/android-release.yml` owns the Android release workflow.
 - `docs/` contains the native setup guide and a deferred cloud-sync plan. `.ai/README.md` routes agent work to focused implementation contracts.
+- `scripts/release.mjs` owns interactive versioning/publication, not app runtime behavior or signing-key storage.
 
 ## Product and privacy boundaries
 

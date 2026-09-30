@@ -18,6 +18,7 @@
 ## Generated files and validation
 
 - Do not hand-edit `.nuxt/`, `.output/`, `node_modules/`, or generated `public/ocr/`; these are ignored. OCR asset changes belong in the preparation script/dependencies.
+- Android build/cache directories and Capacitor-copied web assets/generated Cordova files are ignored by `.gitignore`. `capacitor/android/capacitor.settings.gradle` remains tracked despite regeneration; review its plugin-project changes. Native Kotlin/resources and `capacitor/pnpm-lock.yaml` remain versioned.
 - No dedicated lint or formatter script is declared. Do not claim such checks ran.
 - Select commands and manual checks from `.ai/verification.md`. Documentation-only changes need route/link/source accuracy checks, not an automatic application rebuild.
 - Preserve unrelated working-tree changes. Never add credentials or real cloud identifiers to context or configuration.

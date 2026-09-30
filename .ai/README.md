@@ -11,7 +11,7 @@ step 7, then follow the route exactly in order.
 | `domain-contract.md` | changing mileage, service calculations, validation, or persisted records |
 | `ocr.md` | changing capture, cropping, digit recognition, or image fixtures |
 | `pwa.md` | changing offline caching, OCR asset preparation, or web builds |
-| `android.md` | changing the Capacitor wrapper, native bridge, widget, or Android release |
+| `android.md` | changing the Capacitor wrapper, native camera/widget bridges, or Android release helper/CI |
 | `verification.md` | selecting checks and understanding existing coverage gaps |
 | `ongoing/README.md` | continuing an in-progress task; read only the matching task document |
 
@@ -30,7 +30,7 @@ step 7, then follow the route exactly in order.
 - Persistence, mileage validation, or service calculations: `domain-contract.md` → `verification.md` → source.
 - Capture, crop, OCR, or OCR fixtures: `ocr.md` → `domain-contract.md` → `verification.md` → source.
 - PWA, offline behavior, OCR asset packaging, or web build configuration: `pwa.md` → `verification.md` → source.
-- Android wrapper, native widget, or release: `android.md` → `domain-contract.md` → `verification.md` → source.
+- Android wrapper, native widget, or release helper/CI: `android.md` → `domain-contract.md` → `verification.md` → source.
 - Test-only or verification work: `verification.md` → focused document for the tested boundary → source.
 - Cloud synchronization discussion: `architecture.md` → `docs/cloud-sync-plan.md` → `domain-contract.md` → source. Implementation requires explicit scope approval; this plan is deferred.
 - Combine applicable routes for cross-boundary changes, preserving order and reading each document once.

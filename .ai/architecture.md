@@ -21,6 +21,7 @@ The database module does not enforce domain validation itself; capture/edit/sett
 | Source | Responsibility |
 | --- | --- |
 | `app/components/MileageCapture.vue` | Photo/manual input, OCR progress and fallback, mandatory confirmation, reading creation |
+| `app/utils/image-capture.client.ts` | Shared MIME/size validation, native camera/library bridge, local-only photo loading, picker error mapping |
 | `app/components/ImageCropper.vue` | Initial crop suggestion, pointer movement/resizing, canvas crop Blob |
 | `app/components/MileageEditForm.vue` | Mileage/date/service edits and neighboring-reading checks |
 | `app/components/PwaStatus.vue` | Offline-ready, update-available, and registration-error notices |

@@ -3,16 +3,20 @@
 ## Source map
 
 - `app/components/MileageCapture.vue`: capture/upload/manual-entry state, OCR invocation, confirmation and reading emission.
+- `app/utils/image-capture.client.ts` and `app/types/image-capture.ts`: shared image validation, native camera/library selection, device-local URL loading and bridge types.
 - `app/components/ImageCropper.vue`: displayed-image coordinates, crop interaction and canvas export.
 - `app/utils/initial-crop.ts`: pure RGBA analysis and `suggestInitialCrop()` returning percentage bounds.
 - `app/utils/seven-segment-ocr.ts`: pixel masking and seven-segment decoding.
 - `app/utils/odometer-ocr.client.ts`: browser canvas preprocessing, Tesseract worker lifecycle and result selection.
 - `app/types/ocr.ts`: progress, result, digit-decoder and crop-bound types.
 - `tests/ocr.test.ts` and `tests/fixtures/`: algorithm and image regression coverage.
+- `tests/unit/utils/image-capture.test.ts`: image validation and mocked native picker/error/security coverage, not a real Android camera test.
 
 ## Capture and crop contract
 
 Image selection accepts image MIME types and rejects files larger than 15 MiB. The selected File is copied to an independent Blob before resetting the input, avoiding mobile file-lifetime problems. Preview/processed object URLs are revoked when replaced or unmounted.
+
+`app/utils/image-capture.client.ts` routes native selection through the official Camera plugin with explicit `CAMERA` or `PHOTOS` sources, URI results, and no gallery save. Browser/PWA selection retains separate file inputs (`capture="environment"` only for the camera). Both paths use `validateSelectedImage()` and the existing crop/OCR flow. Native cancellation is silent; other errors allow retry/manual entry. Bridge interfaces live in `app/types/image-capture.ts`. Android's system camera controls the lens despite the rear-direction preference.
 
 The cropper starts at x=20%, y=28%, width=60%, height=24%. Suggestions analyze an image no wider than 720 pixels and do not overwrite a user's interaction. Bounds use percentages of the actual displayed image, not the surrounding letterbox. Pointer dragging moves the box; corner handles resize with an 8% minimum size. Export adds 4% padding relative to each crop dimension and clamps to the image edges.
 

@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@capacitor/android": "8.5.0",
+    "@capacitor/camera": "8.2.4",
     "@capacitor/core": "8.5.0"
   },
   "devDependencies": {

@@ -9,7 +9,7 @@ Planned; implementation has not started. The user requested recording this task 
 - `tests/ocr.test.ts` tests text extraction, real/synthetic seven-segment pixel decoding, and initial crop suggestions. It never calls `recognizeOdometer()` or runs an actual Tesseract worker.
 - `app/utils/odometer-ocr.client.ts` tries seven-segment recognition first and returns early at confidence ≥ 65. A passing pipeline test alone therefore does not prove Tesseract ran.
 - `reference.jpg` and `tests/fixtures/odometer-170370.jpg` are identical and visually show **170370 km**. README documentation has been corrected. The 170307 text-extraction examples are independent strings; the test name “extracts the known reference mileage” is misleading.
-- Last observed `pnpm test` result: 48 passing tests across mileage (21) and OCR (27). This is not evidence of actual Tesseract integration coverage.
+- The original algorithm baseline was 48 passing tests across mileage (21) and OCR (27). Native image-capture and release-helper suites were added later, so 48 is not the current total. Neither those additional mocked suites nor the algorithm tests provide actual Tesseract integration coverage; see `../verification.md` for current commands and coverage.
 - Tesseract.js supports real recognition in Node using encoded image buffers/file paths and in browsers using Blobs/canvas. Node cannot directly exercise the existing browser canvas orchestration.
 
 ## Proposed approach

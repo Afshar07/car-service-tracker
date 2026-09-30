@@ -4,6 +4,8 @@ import type { IOcrProgress, IOcrResult } from "~/types/ocr";
 import { getMileageValidationMessage } from "~/utils/mileage-messages";
 import { validateMileage } from "~/utils/mileage";
 import { recognizeOdometer } from "~/utils/odometer-ocr.client";
+import type { TImageSource } from "~/types/image-capture";
+import { getImageCaptureError, isNativeImageCapture, selectNativeImage, validateSelectedImage } from "~/utils/image-capture.client";
 
 interface IProps {
   previousMileageKm?: number;
@@ -28,8 +30,10 @@ const processing = ref(false);
 const errorMessage = ref("");
 const servicePerformed = ref(false);
 const mileageInputElement = useTemplateRef<HTMLInputElement>("mileageInput");
-
-const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
+const cameraInput = useTemplateRef<HTMLInputElement>("cameraInput");
+const libraryInput = useTemplateRef<HTMLInputElement>("libraryInput");
+const selectingImage = ref(false);
+let disposed = false;
 
 const parsedMileage = computed(() => mileageInput.value.trim() === "" ? Number.NaN : Number(mileageInput.value));
 const validation = computed(() => validateMileage(parsedMileage.value, props.previousMileageKm));
@@ -37,29 +41,46 @@ const validation = computed(() => validateMileage(parsedMileage.value, props.pre
 function selectImage(event: Event): void {
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
-  if (!file) return;
-  if (!file.type.startsWith("image/")) {
-    input.value = "";
-    errorMessage.value = "Please choose an image file (JPG, PNG, or HEIC).";
-    return;
-  }
-  if (file.size > MAX_IMAGE_BYTES) {
-    input.value = "";
-    errorMessage.value = "That image is too large. Please choose a photo smaller than 15 MB.";
+  const image = file ? new Blob([file], { type: file.type }) : undefined;
+  input.value = "";
+  if (!image) return;
+  acceptImage(image);
+}
+
+function acceptImage(image: Blob): void {
+  const error = validateSelectedImage(image);
+  if (error) {
+    errorMessage.value = error;
     return;
   }
   if (imageUrl.value) URL.revokeObjectURL(imageUrl.value);
   if (processedImageUrl.value) URL.revokeObjectURL(processedImageUrl.value);
-  // Keep an independent Blob alive after clearing the input. This also avoids
-  // mobile browsers releasing a camera/gallery File while the image is loading.
-  imageUrl.value = URL.createObjectURL(new Blob([file], { type: file.type }));
-  input.value = "";
+  // The preview owns its Blob independently of the browser input/native picker.
+  imageUrl.value = URL.createObjectURL(new Blob([image], { type: image.type }));
   ocrResult.value = undefined;
   processedImageUrl.value = undefined;
   detectedMileageKm.value = undefined;
   mileageInput.value = "";
   manualEntry.value = false;
   errorMessage.value = "";
+}
+
+async function openImageSource(source: TImageSource): Promise<void> {
+  if (selectingImage.value) return;
+  errorMessage.value = "";
+  if (!isNativeImageCapture()) {
+    (source === "camera" ? cameraInput.value : libraryInput.value)?.click();
+    return;
+  }
+  selectingImage.value = true;
+  try {
+    const image = await selectNativeImage(source);
+    if (!disposed) acceptImage(image);
+  } catch (error) {
+    if (!disposed) errorMessage.value = getImageCaptureError(error) ?? "";
+  } finally {
+    selectingImage.value = false;
+  }
 }
 
 async function runOcr(image: Blob): Promise<void> {
@@ -116,6 +137,7 @@ function adjustCrop(): void {
 }
 
 onBeforeUnmount(() => {
+  disposed = true;
   if (imageUrl.value) URL.revokeObjectURL(imageUrl.value);
   if (processedImageUrl.value) URL.revokeObjectURL(processedImageUrl.value);
 });
@@ -132,18 +154,18 @@ onBeforeUnmount(() => {
     </header>
 
     <template v-if="!imageUrl">
-      <label class="camera-button">
+      <button class="camera-button" type="button" :disabled="selectingImage" @click="openImageSource('camera')">
         <span class="camera-button__icon">▣</span>
         <strong>Take photo</strong>
         <span>Use a clear, straight-on dashboard photo.</span>
-        <input type="file" accept="image/*" capture="environment" @change="selectImage">
-      </label>
-      <label class="camera-button camera-button--secondary">
+      </button>
+      <input ref="cameraInput" hidden type="file" accept="image/*" capture="environment" @change="selectImage">
+      <button class="camera-button camera-button--secondary" type="button" :disabled="selectingImage" @click="openImageSource('library')">
         <span class="camera-button__icon">▧</span>
         <strong>Choose from library</strong>
         <span>Select an existing odometer photo.</span>
-        <input type="file" accept="image/*" @change="selectImage">
-      </label>
+      </button>
+      <input ref="libraryInput" hidden type="file" accept="image/*" @change="selectImage">
       <button class="text-button" type="button" @click="showManualInput">Enter mileage manually</button>
     </template>
 
@@ -183,7 +205,7 @@ onBeforeUnmount(() => {
       </label>
       <p v-for="code in validation.errors" :key="code" class="message message--error">{{ getMileageValidationMessage(code) }}</p>
       <p v-for="code in validation.warnings" :key="code" class="message message--warning">{{ getMileageValidationMessage(code) }}</p>
-      <button class="button button--primary button--full" type="button" :disabled="!validation.valid" @click="save">Save confirmed mileage</button>
+      <button class="button button--primary button--full confirmation__save" type="button" :disabled="!validation.valid" @click="save">Save confirmed mileage</button>
       <button v-if="imageUrl" class="text-button" type="button" @click="adjustCrop">Adjust crop</button>
     </section>
   </div>

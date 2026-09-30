@@ -8,6 +8,7 @@
     "dev": "pnpm prepare:ocr && nuxt dev",
     "generate": "pnpm prepare:ocr && nuxt generate",
     "preview": "nuxt preview",
+    "release": "node scripts/release.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },

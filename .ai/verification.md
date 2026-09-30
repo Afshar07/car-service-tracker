@@ -8,12 +8,15 @@ Run from the workspace root unless noted:
 | --- | --- |
 | Mileage/domain functions | `pnpm exec vitest run tests/mileage.test.ts` |
 | OCR/pixel/crop algorithms | `pnpm exec vitest run tests/ocr.test.ts` |
+| Native image-selection helper (mocked bridge) | `pnpm exec vitest run tests/unit/utils/image-capture.test.ts` |
 | All existing unit tests | `pnpm test` |
+| Interactive release helper | `pnpm exec vitest run tests/release-script.test.ts` and `pnpm release --help` |
 | Application TypeScript/Vue contracts | `pnpm exec nuxt typecheck` |
 | Web/PWA build and OCR asset preparation | `pnpm build` |
 | Static output for Android | `pnpm generate` |
 | Native asset synchronization | `pnpm --dir capacitor sync` |
 | Native debug compilation after sync (requires Android/JDK/Gradle setup) | From `capacitor/android`: `gradle --no-daemon assembleDebug` |
+| Native release compilation after sync | From `capacitor/android`: `gradle --no-daemon assembleRelease`; signing and verification are separate, see `docs/android-widget.md` |
 
 There is no lint script, browser-test script, or root native APK build script. Treat native synchronization as preparation, not successful compilation.
 
@@ -23,11 +26,13 @@ There is no lint script, browser-test script, or root native APK build script. T
 
 - `tests/mileage.test.ts`: integer/range/previous-reading validation, warnings, service thresholds, history rate/date estimation, missing configuration and fixed-monthly current-mileage estimation.
 - `tests/ocr.test.ts`: candidate extraction, synthetic/real seven-segment decoding, padded crops, narrow digits, incomplete-display rejection and initial-crop suggestions.
+- `tests/unit/utils/image-capture.test.ts`: shared image type/15 MiB validation, explicit native sources, local-only file reads, retries, cancellation and permission-error messages with mocked bridge/fetch. This does not exercise a device camera or browser chooser.
+- `tests/release-script.test.ts`: version bumping and release-helper safeguards with mocked Git/GitHub commands; tests must never publish a real release.
 - PNG/JPEG pixels are decoded with `pngjs` and `jpeg-js`. These tests do not run the real browser Tesseract worker.
 
 ## Coverage gaps and manual checks
 
-There are no dedicated automated component, IndexedDB migration, PWA/offline, native bridge, or end-to-end tests in the current suite. Effective service-marker precedence and edit-neighbor validation are not directly covered by the existing mileage tests.
+There are no dedicated automated component, IndexedDB migration, PWA/offline, real device/native bridge, or end-to-end tests in the current suite. Mocked image-capture bridge coverage does not prove real camera behavior. Release-helper tests do not execute real Git/GitHub publication. Effective service-marker precedence and edit-neighbor validation are not directly covered by the existing mileage tests. Real Tesseract worker/browser integration remains planned in `ongoing/tesseract-integration-tests.md`.
 
 - Capture/crop/UI changes: check mobile camera/gallery inputs, preview lifetime, drag/resize in letterboxed images, OCR failure/manual fallback, confirmation, and cancel/reopen.
 - Data/UI changes: confirm persistence after reload, newest-first ordering after date edits, neighboring mileage constraints, service-marker baseline changes, and delete confirmation.
