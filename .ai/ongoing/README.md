@@ -6,7 +6,7 @@ instructions.
 
 | Task | Read when you're... |
 | --- | --- |
-| No active task documents | Start from the applicable route in `.ai/README.md` |
+| [Real Tesseract integration tests](tesseract-integration-tests.md) | adding actual Tesseract recognition coverage and browser fallback verification |
 
 Cloud synchronization is deferred in `docs/cloud-sync-plan.md`; it is not an active implementation task. Completed context population does not need an ongoing task document.
 
