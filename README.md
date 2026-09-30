@@ -34,4 +34,4 @@ The app is local-only: readings remain in IndexedDB and OCR runs in the browser.
 
 ## OCR fixtures
 
-The OCR pipeline is isolated in `app/utils/odometer-ocr.client.ts`. The first real image fixture should use the reference dashboard photo whose confirmed odometer value is `170307` km.
+The OCR pipeline is isolated in `app/utils/odometer-ocr.client.ts`. The reference dashboard photo, `reference.jpg`, is also stored as `tests/fixtures/odometer-170370.jpg`; its confirmed odometer value is `170370` km. `tests/ocr.test.ts` verifies decoding this fixture.

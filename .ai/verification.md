@@ -1,0 +1,38 @@
+# Verification guide
+
+## Commands defined by the repository
+
+Run from the workspace root unless noted:
+
+| Boundary | Check |
+| --- | --- |
+| Mileage/domain functions | `pnpm exec vitest run tests/mileage.test.ts` |
+| OCR/pixel/crop algorithms | `pnpm exec vitest run tests/ocr.test.ts` |
+| All existing unit tests | `pnpm test` |
+| Application TypeScript/Vue contracts | `pnpm exec nuxt typecheck` |
+| Web/PWA build and OCR asset preparation | `pnpm build` |
+| Static output for Android | `pnpm generate` |
+| Native asset synchronization | `pnpm --dir capacitor sync` |
+| Native debug compilation after sync (requires Android/JDK/Gradle setup) | From `capacitor/android`: `gradle --no-daemon assembleDebug` |
+
+There is no lint script, browser-test script, or root native APK build script. Treat native synchronization as preparation, not successful compilation.
+
+## Existing coverage
+
+`vitest.config.ts` runs `tests/**/*.test.ts` in Node and maps `~` to `app/`.
+
+- `tests/mileage.test.ts`: integer/range/previous-reading validation, warnings, service thresholds, history rate/date estimation, missing configuration and fixed-monthly current-mileage estimation.
+- `tests/ocr.test.ts`: candidate extraction, synthetic/real seven-segment decoding, padded crops, narrow digits, incomplete-display rejection and initial-crop suggestions.
+- PNG/JPEG pixels are decoded with `pngjs` and `jpeg-js`. These tests do not run the real browser Tesseract worker.
+
+## Coverage gaps and manual checks
+
+There are no dedicated automated component, IndexedDB migration, PWA/offline, native bridge, or end-to-end tests in the current suite. Effective service-marker precedence and edit-neighbor validation are not directly covered by the existing mileage tests.
+
+- Capture/crop/UI changes: check mobile camera/gallery inputs, preview lifetime, drag/resize in letterboxed images, OCR failure/manual fallback, confirmation, and cancel/reopen.
+- Data/UI changes: confirm persistence after reload, newest-first ordering after date edits, neighboring mileage constraints, service-marker baseline changes, and delete confirmation.
+- PWA changes: use a built production app; cache once online, reload/navigate and run OCR offline, then test update handling without losing readings.
+- Android changes: verify native compilation, snapshot refresh after mutations, retained state while closed, pin support/status, tap-to-open, and overdue rendering on a device/emulator with a suitable launcher.
+- Documentation/context-only changes: verify referenced paths exist, routes are discoverable and ordered, placeholders are removed, and claims match source. Application execution is not required unless source changes.
+
+Report checks actually run and outstanding checks separately. Do not turn documented commands or existing fixture assertions into claims of current runtime validation.
