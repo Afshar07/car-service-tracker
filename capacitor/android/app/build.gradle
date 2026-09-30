@@ -7,6 +7,11 @@ android {
     namespace = "com.afshar.carservicetracker"
     compileSdk = 36
 
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+
     defaultConfig {
         applicationId "com.afshar.carservicetracker"
         minSdkVersion 24
@@ -27,9 +32,20 @@ android {
     }
 }
 
-repositories {
-    flatDir {
-        dirs "../capacitor-cordova-android-plugins/src/main/libs", "libs"
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21
+    }
+}
+
+// Local JARs are loaded through fileTree below. Only add an AAR repository
+// when there are actual local artifacts to resolve.
+def localLibraryDirs = [file("../capacitor-cordova-android-plugins/src/main/libs"), file("libs")]
+if (localLibraryDirs.any { directory -> !fileTree(directory).matching { include "*.aar" }.isEmpty() }) {
+    repositories {
+        flatDir {
+            dirs localLibraryDirs
+        }
     }
 }
 

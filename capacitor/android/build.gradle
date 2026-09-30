@@ -10,6 +10,22 @@ allprojects {
     }
 }
 
+// Capacitor regenerates the Cordova module on sync, including an empty
+// flatDir repository. Remove only unused repositories before AGP inspects
+// them; keep repositories containing local artifacts for Cordova plugins.
+subprojects {
+    afterEvaluate { project ->
+        def emptyLocalRepositories = project.repositories.withType(
+            org.gradle.api.artifacts.repositories.FlatDirectoryArtifactRepository
+        ).findAll { repository ->
+            repository.dirs.every { directory ->
+                project.fileTree(directory).matching { include "*.jar", "*.aar" }.isEmpty()
+            }
+        }
+        emptyLocalRepositories.each { project.repositories.remove(it) }
+    }
+}
+
 tasks.register("clean", Delete) {
     delete rootProject.layout.buildDirectory
 }
