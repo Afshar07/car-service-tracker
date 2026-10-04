@@ -29,7 +29,7 @@ The database module does not enforce domain validation itself; capture/edit/sett
 
 ## Boundaries and limitations
 
-- No server routes or remote data service are implemented. IndexedDB version 1 contains readings and one service-settings record.
+- No server routes or remote data service are implemented. IndexedDB version 2 contains readings, one service-settings record, and an initialization marker. Android also keeps an automatic private JSON backup for fresh-database recovery; JSON export/import is available in history.
 - Photos/crops are transient Blobs/object URLs, not persisted reading fields.
 - The Android widget is a derived, last-known snapshot. It does not independently estimate mileage while the application is closed.
 - Time-dependent computed mileage has no periodic clock trigger in the page; it is not a continuously refreshed live odometer.

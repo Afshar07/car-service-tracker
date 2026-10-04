@@ -12,17 +12,65 @@ import {
   requestCarWidgetPin,
 } from "~/utils/car-widget.client";
 
+import { createMileageBackup } from "~/utils/mileage-backup";
+import { exportMileageJson } from "~/utils/mileage-backup.client";
+
 const {
   readings,
   serviceSettings,
   currentMileageKm,
   loaded,
+  backupWarning,
+  importHistory,
   load,
   addReading,
   updateReading,
   removeReading,
   updateServiceSettings,
 } = useCarData();
+
+const transferBusy = ref(false);
+const transferMessage = ref("");
+const transferError = ref("");
+const loadError = ref("");
+const importInput = ref<HTMLInputElement>();
+
+async function exportHistory(): Promise<void> {
+  transferBusy.value = true;
+  transferMessage.value = "";
+  transferError.value = "";
+  try {
+    await exportMileageJson(JSON.stringify(createMileageBackup(readings.value, serviceSettings.value), null, 2));
+    transferMessage.value = "Mileage history exported. Keep the JSON file to restore it later.";
+  }
+  catch {
+    transferError.value = "Could not export mileage history. Please try again.";
+  }
+  finally {
+    transferBusy.value = false;
+  }
+}
+
+async function importFile(event: Event): Promise<void> {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+  transferMessage.value = "";
+  transferError.value = "";
+  transferBusy.value = true;
+  try {
+    if (file.size > 10 * 1024 * 1024) throw new Error("Choose a JSON backup smaller than 10 MB.");
+    const count = await importHistory(await file.text());
+    transferMessage.value = `Imported ${count} ${count === 1 ? "reading" : "readings"}. Existing readings and service settings were kept.`;
+  }
+  catch (error) {
+    transferError.value = error instanceof Error ? error.message : "Could not import mileage history.";
+  }
+  finally {
+    transferBusy.value = false;
+    input.value = "";
+  }
+}
 
 const showCapture = ref(false);
 const showSettings = ref(false);
@@ -149,7 +197,13 @@ async function confirmDelete(reading: IMileageReading): Promise<void> {
 }
 
 onMounted(async () => {
-  await load();
+  try {
+    await load();
+  }
+  catch {
+    loadError.value = "Could not load your saved history. Close and reopen the app to try again. Your automatic backup has been kept.";
+    return;
+  }
   await refreshWidgetStatus();
   document.addEventListener("visibilitychange", handleVisibilityChange);
 });
@@ -169,7 +223,8 @@ onBeforeUnmount(() => {
       <button class="icon-button" type="button" aria-label="Service settings" @click="openSettings">⚙</button>
     </header>
 
-    <div v-if="!loaded" class="loading-page">Loading your car data…</div>
+    <p v-if="loadError" class="error-message" role="alert">{{ loadError }}</p>
+    <div v-else-if="!loaded" class="loading-page">Loading your car data…</div>
 
     <template v-else>
       <section class="hero-card" :data-status="summary.status">
@@ -233,6 +288,18 @@ onBeforeUnmount(() => {
             <h2>Mileage history</h2>
           </div>
           <span>{{ readings.length }} {{ readings.length === 1 ? "reading" : "readings" }}</span>
+        </div>
+
+        <div class="history-transfer">
+          <div class="history-transfer__actions">
+            <button class="button button--secondary" type="button" :disabled="transferBusy" @click="exportHistory">Export JSON</button>
+            <button class="button button--secondary" type="button" :disabled="transferBusy" @click="importInput?.click()">Import JSON</button>
+            <input ref="importInput" type="file" accept=".json,application/json" hidden aria-label="Import mileage history JSON" @change="importFile">
+          </div>
+          <p class="helper">History is kept across normal updates. Export a backup before uninstalling or clearing app data. Import adds readings and keeps existing service settings.</p>
+          <p v-if="transferMessage" class="helper" role="status">{{ transferMessage }}</p>
+          <p v-if="transferError" class="error-message" role="alert">{{ transferError }}</p>
+          <p v-if="backupWarning" class="error-message" role="alert">{{ backupWarning }}</p>
         </div>
 
         <div v-if="readings.length" class="history-list">

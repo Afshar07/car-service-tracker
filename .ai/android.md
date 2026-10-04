@@ -8,7 +8,8 @@ Capture uses explicit camera/library sources via `app/utils/image-capture.client
 
 Native sources under `capacitor/android/app/src/main/java/com/afshar/carservicetracker/`:
 
-- `MainActivity.kt`: registers `CarWidget` with Capacitor.
+- `MainActivity.kt`: registers `CarWidget` and `MileageBackup` with Capacitor.
+- `MileageBackupPlugin.kt`: atomically stores/reads the on-device history backup and opens the Android share sheet for JSON exports through the existing cache FileProvider.
 - `CarWidgetPlugin.kt`: persists snapshots, returns widget status, and requests launcher pinning.
 - `CarServiceWidgetProvider.kt`: renders the saved state with Android RemoteViews and opens the app when tapped.
 
