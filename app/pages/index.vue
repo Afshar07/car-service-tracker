@@ -33,7 +33,9 @@ const transferBusy = ref(false);
 const transferMessage = ref("");
 const transferError = ref("");
 const loadError = ref("");
-const importInput = ref<HTMLInputElement>();
+const appVersion = useAppConfig().version;
+const showMenu = ref(false);
+const showBackup = ref(false);
 
 async function exportHistory(): Promise<void> {
   transferBusy.value = true;
@@ -74,6 +76,7 @@ async function importFile(event: Event): Promise<void> {
 
 const showCapture = ref(false);
 const showSettings = ref(false);
+const showEditing = ref(false);
 const saving = ref(false);
 const editingReading = ref<IMileageReading>();
 const lastServiceMileageInput = ref("");
@@ -176,7 +179,7 @@ async function saveEditedReading(reading: IMileageReading): Promise<void> {
   saving.value = true;
   await updateReading(reading);
   saving.value = false;
-  editingReading.value = undefined;
+  showEditing.value = false;
 }
 
 async function saveSettings(): Promise<void> {
@@ -190,10 +193,16 @@ async function saveSettings(): Promise<void> {
   showSettings.value = false;
 }
 
-async function confirmDelete(reading: IMileageReading): Promise<void> {
-  if (window.confirm(`Delete the ${formatNumber(reading.mileageKm)} km reading?`)) {
-    await removeReading(reading.id);
-  }
+const { pendingDelete, deleting, deleteError, requestDelete, cancelDelete, confirmDelete } = useReadingDeletion(removeReading);
+const menuDestination = ref<"service" | "backup">();
+function selectMenu(destination: "service" | "backup"): void {
+  showMenu.value = false;
+  menuDestination.value = destination;
+}
+function finishMenuNavigation(): void {
+  if (menuDestination.value === "service") openSettings();
+  else if (menuDestination.value === "backup") showBackup.value = true;
+  menuDestination.value = undefined;
 }
 
 onMounted(async () => {
@@ -220,7 +229,7 @@ onBeforeUnmount(() => {
         <span class="brand__mark">CS</span>
         <span>Car Service</span>
       </a>
-      <button class="icon-button" type="button" aria-label="Service settings" @click="openSettings">⚙</button>
+      <button class="icon-button" type="button" aria-label="Open menu" :aria-expanded="showMenu" aria-haspopup="dialog" @click="showMenu = true">☰</button>
     </header>
 
     <p v-if="loadError" class="error-message" role="alert">{{ loadError }}</p>
@@ -290,18 +299,6 @@ onBeforeUnmount(() => {
           <span>{{ readings.length }} {{ readings.length === 1 ? "reading" : "readings" }}</span>
         </div>
 
-        <div class="history-transfer">
-          <div class="history-transfer__actions">
-            <button class="button button--secondary" type="button" :disabled="transferBusy" @click="exportHistory">Export JSON</button>
-            <button class="button button--secondary" type="button" :disabled="transferBusy" @click="importInput?.click()">Import JSON</button>
-            <input ref="importInput" type="file" accept=".json,application/json" hidden aria-label="Import mileage history JSON" @change="importFile">
-          </div>
-          <p class="helper">History is kept across normal updates. Export a backup before uninstalling or clearing app data. Import adds readings and keeps existing service settings.</p>
-          <p v-if="transferMessage" class="helper" role="status">{{ transferMessage }}</p>
-          <p v-if="transferError" class="error-message" role="alert">{{ transferError }}</p>
-          <p v-if="backupWarning" class="error-message" role="alert">{{ backupWarning }}</p>
-        </div>
-
         <div v-if="readings.length" class="history-list">
           <article v-for="(reading, index) in readings" :key="reading.id" class="history-item">
             <span class="history-item__dot" />
@@ -317,8 +314,8 @@ onBeforeUnmount(() => {
               </small>
             </div>
             <div class="history-item__actions">
-              <button class="icon-button icon-button--quiet" type="button" aria-label="Edit reading" @click="editingReading = reading">✎</button>
-              <button class="icon-button icon-button--quiet" type="button" aria-label="Delete reading" @click="confirmDelete(reading)">×</button>
+              <button class="icon-button icon-button--quiet" type="button" aria-label="Edit reading" @click="editingReading = reading; showEditing = true">✎</button>
+              <button class="icon-button icon-button--quiet" type="button" aria-label="Delete reading" @click="requestDelete(reading)">×</button>
             </div>
           </article>
         </div>
@@ -330,43 +327,24 @@ onBeforeUnmount(() => {
       </section>
     </template>
 
-    <div v-if="showCapture" class="modal" role="dialog" aria-modal="true" aria-label="Add mileage">
-      <div class="modal__sheet">
+    <AppDialog :open="showCapture" label="Add mileage" :busy="saving" @close="showCapture = false">
         <MileageCapture :previous-mileage-km="currentMileageKm" @save="saveReading" @cancel="showCapture = false" />
         <p v-if="saving" class="helper">Saving…</p>
-      </div>
-    </div>
+    </AppDialog>
 
-    <div v-if="editingReading" class="modal" role="dialog" aria-modal="true" aria-label="Edit mileage">
-      <div class="modal__sheet">
-        <MileageEditForm
+    <AppDialog :open="showEditing" label="Edit mileage" :busy="saving" @close="showEditing = false" @closed="editingReading = undefined">
+        <MileageEditForm v-if="editingReading"
           :reading="editingReading"
           :readings="readings"
           @save="saveEditedReading"
-          @cancel="editingReading = undefined"
+          @cancel="showEditing = false"
         />
         <p v-if="saving" class="helper">Saving…</p>
-      </div>
-    </div>
+    </AppDialog>
 
-    <div v-if="showSettings" class="modal" role="dialog" aria-modal="true" aria-label="Service settings">
-      <form class="modal__sheet settings" @submit.prevent="saveSettings">
-        <header class="panel-header">
-          <div><p class="eyebrow">Service schedule</p><h2>Set your countdown</h2></div>
-          <button class="icon-button" type="button" aria-label="Close" @click="showSettings = false">×</button>
-        </header>
-        <label class="form-field">
-          <span>Last service mileage</span>
-          <div><input v-model="lastServiceMileageInput" inputmode="numeric" pattern="[0-9]*" required><b>km</b></div>
-          <small>The odometer reading when the car was last serviced.</small>
-        </label>
-        <label class="form-field">
-          <span>Service every</span>
-          <div><input v-model="serviceIntervalInput" inputmode="numeric" pattern="[0-9]*" required><b>km</b></div>
-          <small>Your mechanic or manufacturer’s recommended interval.</small>
-        </label>
-        <button class="button button--primary button--full" type="submit" :disabled="!settingsValid">Save service settings</button>
-      </form>
-    </div>
+    <ServiceSettingsDialog :open="showSettings" v-model:last-service="lastServiceMileageInput" v-model:interval="serviceIntervalInput" :valid="settingsValid" @close="showSettings = false" @save="saveSettings" />
+    <AppMenu :open="showMenu" :version="appVersion" :ready="loaded" @close="showMenu = false" @select="selectMenu" @closed="finishMenuNavigation" />
+    <DataBackupDialog :open="showBackup" :busy="transferBusy" :message="transferMessage" :error="transferError" :warning="backupWarning" @close="showBackup = false" @export="exportHistory" @import="importFile" />
+    <ConfirmDialog :open="!!pendingDelete" :message="pendingDelete ? `Delete the ${formatNumber(pendingDelete.mileageKm)} km reading?` : ''" :busy="deleting" :error="deleteError" @cancel="cancelDelete" @confirm="confirmDelete" />
   </main>
 </template>

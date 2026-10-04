@@ -1,14 +1,18 @@
 import { defineNuxtConfig } from "nuxt/config";
+import { readAppVersion } from "./scripts/app-version.mjs";
 
 const buildRevision = process.env.CF_PAGES_COMMIT_SHA
   ?? process.env.VERCEL_GIT_COMMIT_SHA
   ?? new Date().toISOString();
 
 export default defineNuxtConfig({
+  appConfig: { version: readAppVersion() },
+  // Static PWA metadata mirrors default --color-primary / --color-background.
+  // Manifests cannot resolve CSS custom properties; keep these aligned with tokens.css.
   compatibilityDate: "2025-07-15",
   devtools: { enabled: true },
   modules: ["@vite-pwa/nuxt"],
-  css: ["~/assets/css/main.css"],
+  css: ["~/assets/css/tokens.css", "~/assets/css/main.css"],
   app: {
     head: {
       htmlAttrs: { lang: "en" },
