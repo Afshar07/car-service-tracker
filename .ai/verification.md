@@ -46,3 +46,7 @@ There are no dedicated automated component, real IndexedDB migration, PWA/offlin
 - Documentation/context-only changes: verify referenced paths exist, routes are discoverable and ordered, placeholders are removed, and claims match source. Application execution is not required unless source changes.
 
 Report checks actually run and outstanding checks separately. Do not turn documented commands or existing fixture assertions into claims of current runtime validation.
+
+- `tests/app-version.test.ts` covers exact Android version exposure, automatic release-bump propagation and invalid-source build failures.
+- `tests/reading-deletion.test.ts` covers request/cancel without mutation, confirmed ID selection, concurrent confirmation guards and failed-write retry. These are state-helper tests, not browser/component tests.
+- Drawer/dialog checks: mobile and desktop layouts, keyboard focus containment/restoration, backdrop/Escape/close controls, menu-to-panel transitions, rapid reopen, reduced motion and semantic-token overrides.

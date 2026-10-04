@@ -23,3 +23,5 @@ Manifest start URL, fallback, and OCR paths assume deployment at the domain root
 ## Verification boundary
 
 Changes to asset paths, build hooks, glob patterns, file sizes, or update behavior require generated/build inspection and a production-mode browser check. Test both shell navigation and OCR after initial caching, with connectivity disabled. Do not infer offline readiness solely from a passing Node test or the status banner.
+
+Static `theme-color` and manifest colors in `nuxt.config.ts` intentionally mirror default `--color-primary` / `--color-background` in `tokens.css`. Static manifests cannot consume CSS variables; update both when changing the default palette. Runtime theme overrides do not change the install manifest.

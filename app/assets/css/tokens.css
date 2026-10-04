@@ -1,0 +1,47 @@
+/* Future themes override this semantic block, never individual component rules. */
+:root,
+[data-theme="default"] {
+  color-scheme: light;
+  --color-primary: #111b17;
+  --color-primary-foreground: #ffffff;
+  --color-primary-muted: #52605a;
+  --color-secondary: #e9ece7;
+  --color-secondary-foreground: #111b17;
+  --color-secondary-muted: #f4f6f2;
+  --color-accent: #d7ff64;
+  --color-accent-strong: #92b52e;
+  --color-background: #f4f2eb;
+  --color-surface: #fffefa;
+  --color-surface-muted: #f4f6f2;
+  --color-input: #ffffff;
+  --color-text: #111b17;
+  --color-text-muted: #52605a;
+  --color-text-subtle: #8a948f;
+  --color-text-on-dark-muted: #aab5b0;
+  --color-border: #d9ddd7;
+  --color-border-strong: #aab2ad;
+  --color-border-on-dark: #ffffff2e;
+  --color-border-on-dark-muted: #ffffff20;
+  --color-overlay: #07100c99;
+  --color-danger: #b9342b;
+  --color-danger-foreground: #ffffff;
+  --color-danger-surface: #ffebe8;
+  --color-danger-inverse-surface: #371817;
+  --color-warning: #8a6000;
+  --color-warning-surface: #fff2cf;
+  --color-success: #426b16;
+  --color-success-surface: #e8f6d0;
+  --color-media-background: #050807;
+  --color-media-foreground: #ffffff;
+  --color-focus-ring: #92b52e55;
+  --shadow-card: 0 18px 50px #17201c1a;
+  --shadow-dialog: 0 -20px 80px #0003;
+  --shadow-crop: 0 0 0 999px #0008;
+  --shadow-control: 0 1px 4px #0003;
+  --shadow-notice: 0 8px 28px #17201c26;
+  --radius-panel: 28px;
+  --motion-fast: 150ms;
+  --motion-normal: 220ms;
+  --motion-spin: 800ms;
+  --motion-easing-standard: cubic-bezier(.2, .8, .2, 1);
+}

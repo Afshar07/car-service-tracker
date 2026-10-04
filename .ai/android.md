@@ -61,3 +61,5 @@ The helper explicitly targets GitHub.com and pins pushes to the bump commit SHA;
 ambient GitHub host/repository settings do not choose the publication destination.
 
 Changes across TypeScript and Kotlin must preserve the snapshot contract and use the same service-status values. Native verification requires an Android build and device/emulator/launcher checks, not just Nuxt typechecking.
+
+The menu version comes from `scripts/app-version.mjs`, which reads Gradle `versionName` during Nuxt configuration and exposes `appConfig.version`. Release bumps need no separate UI-version write; rebuild web assets after bumping.
