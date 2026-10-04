@@ -30,12 +30,17 @@ There is no lint script, browser-test script, or root native APK build script. T
 - `tests/release-script.test.ts`: version bumping and release-helper safeguards with mocked Git/GitHub commands; tests must never publish a real release.
 - PNG/JPEG pixels are decoded with `pngjs` and `jpeg-js`. These tests do not run the real browser Tesseract worker.
 
+- `tests/mileage-backup.test.ts`: full JSON round trips, malformed backups, deduplication, conflicts, and chronological validation.
+- `tests/car-data-backup.test.ts`: mocked persistence/bridge recovery, mutation snapshots, failed writes, existing-data precedence, and stale-backup deletion safeguards.
+- `tests/car-database.test.ts`: mocked version-1 preservation, fresh schema creation, atomic import/deletion store selection, and failed transaction completion.
+- `tests/unit/utils/mileage-backup-client.test.ts`: mocked native backup/sharing and browser download/storage retention behavior.
+
 ## Coverage gaps and manual checks
 
-There are no dedicated automated component, IndexedDB migration, PWA/offline, real device/native bridge, or end-to-end tests in the current suite. Mocked image-capture bridge coverage does not prove real camera behavior. Release-helper tests do not execute real Git/GitHub publication. Effective service-marker precedence and edit-neighbor validation are not directly covered by the existing mileage tests. Real Tesseract worker/browser integration remains planned in `ongoing/tesseract-integration-tests.md`.
+There are no dedicated automated component, real IndexedDB migration, PWA/offline, real device/native bridge, or end-to-end tests in the current suite. Mocked image-capture bridge coverage does not prove real camera behavior. Release-helper tests do not execute real Git/GitHub publication. Effective service-marker precedence and edit-neighbor validation are not directly covered by the existing mileage tests. Real Tesseract worker/browser integration remains planned in `ongoing/tesseract-integration-tests.md`.
 
 - Capture/crop/UI changes: check mobile camera/gallery inputs, preview lifetime, drag/resize in letterboxed images, OCR failure/manual fallback, confirmation, and cancel/reopen.
-- Data/UI changes: confirm persistence after reload, newest-first ordering after date edits, neighboring mileage constraints, service-marker baseline changes, and delete confirmation.
+- Data/UI changes: export/share JSON with all details, import into a fresh installation, repeat import, reject malformed/conflicting files, check normal update retention and native fresh-database recovery; confirm persistence after reload, newest-first ordering after date edits, neighboring mileage constraints, service-marker baseline changes, and delete confirmation.
 - PWA changes: use a built production app; cache once online, reload/navigate and run OCR offline, then test update handling without losing readings.
 - Android changes: verify native compilation, snapshot refresh after mutations, retained state while closed, pin support/status, tap-to-open, and overdue rendering on a device/emulator with a suitable launcher.
 - Documentation/context-only changes: verify referenced paths exist, routes are discoverable and ordered, placeholders are removed, and claims match source. Application execution is not required unless source changes.

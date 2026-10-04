@@ -6,6 +6,7 @@ import com.getcapacitor.BridgeActivity
 class MainActivity : BridgeActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         registerPlugin(CarWidgetPlugin::class.java)
+        registerPlugin(MileageBackupPlugin::class.java)
         super.onCreate(savedInstanceState)
     }
 }

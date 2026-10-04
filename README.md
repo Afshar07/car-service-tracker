@@ -9,6 +9,8 @@ A mobile-first, local-only PWA for recording odometer readings and tracking when
 - Mandatory confirmation before saving
 - Mileage validation against the previous reading
 - IndexedDB history with timestamps
+- Automatic Android mileage backup/recovery and persistent browser storage requests
+- JSON history export/sharing and validated import
 - Edit/delete readings, mark service completion, and view Gregorian/Jalali dates
 - Service interval and remaining-distance status
 - Estimated current mileage based on a fixed 2,000 km/month, distinct from confirmed readings
@@ -17,6 +19,30 @@ A mobile-first, local-only PWA for recording odometer readings and tracking when
 - Optional Android Capacitor wrapper with native camera/photo picker and home-screen widget
 
 No photos leave the device. The app has no backend, account, cloud sync, or AI vision API. Clearing app/browser data or uninstalling the Android app can remove local readings.
+
+## Keeping and sharing history
+
+Normal PWA and Android updates keep local history. On Android, install updates
+with the same app ID and signing key over the existing app. Do not uninstall
+first: uninstalling or clearing app data can delete both history and the automatic
+backup.
+
+The Android app saves an atomic on-device JSON backup after loading and after
+every history/settings change. If a new WebView database is created, it restores
+that backup automatically. Existing databases, including deliberately emptied
+ones, remain authoritative. The browser app requests persistent storage where
+supported; browsers may decline this request.
+
+Use **Export JSON** under Mileage history to download a backup in a browser or
+open Android's share sheet. The versioned JSON includes every reading's ID,
+confirmed mileage, ISO timestamp, detected mileage when available, service marker,
+and service settings. Photos are not stored or exported.
+
+Use **Import JSON** to restore or merge an exported file (up to 10 MB). Repeated
+imports do not duplicate readings. Existing service settings are kept; a fresh
+installation restores settings from the file. Invalid files, conflicting reading
+IDs, and history that decreases over time are rejected before writing. Keep an
+exported copy outside the app before reinstalling or clearing data.
 
 ## Development
 

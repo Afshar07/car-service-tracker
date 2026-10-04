@@ -8,9 +8,12 @@ Sources: `app/types/car.ts`, `app/utils/mileage.ts`, `app/utils/car-database.ts`
 - Capture creates IDs with `crypto.randomUUID()` and timestamps with `new Date().toISOString()`. It stores detected mileage only when detection exists and differs from the confirmed value.
 - Editing preserves the ID and other existing fields, updates mileage/date/service marker, and converts local date-time input back to ISO.
 - `IServiceSettings`: singleton ID `"service"`, `lastServiceMileageKm`, and `serviceIntervalKm`.
-- IndexedDB name: `car-service-tracker`; version: `1`. `readings` uses key path `id` and index `by-recorded-at`; `settings` uses key path `id`.
+- IndexedDB name: `car-service-tracker`; version: `2`. `readings` uses key path `id` and index `by-recorded-at`; `settings` uses key path `id`.
 - `getMileageReadings()` reverses indexed date order. Composable add/update sorts descending by timestamp; callers of effective-service resolution must preserve newest-first order.
-- Database writes use `put`; deletes are physical deletes. No outbox, tombstones, migration beyond initial creation, or cloud owner fields exist.
+- Version 2 adds a `metadata` store with an `initialized` marker. Upgrading version 1 creates only that store and marks the existing database authoritative; readings/settings are preserved. Mutations/imports update this marker in the same transaction. Fresh databases are marked only after recovery is checked.
+- Database writes use `put`; deletes are physical deletes. No outbox, tombstones, or cloud owner fields exist.
+- `mileage-backup.ts` exports/validates versioned kilometer JSON with all persisted fields and settings. Import merges by ID, rejects conflicting IDs or decreasing chronological mileage, and keeps existing settings. Writes are atomic across stores.
+- `MileageBackup` on Android maintains an atomic private JSON backup after load/mutations and shares exports using FileProvider. Recovery runs only for fresh, empty databases; initialized empty histories do not resurrect deleted readings. Backup failures warn without discarding successfully saved data. Browser storage retention requests are best-effort. Uninstall/data clearing can delete local backups.
 
 ## Mileage validation
 
@@ -39,6 +42,6 @@ Dashboard and widget summaries use estimated current mileage; the displayed last
 
 ## Mutation boundary
 
-`useCarData()` exposes load, add, update, delete, and settings update. Persistence completes before reactive state changes, then widget synchronization runs. Loading is client-only and skipped once the shared loaded flag is true. Widget synchronization is not cloud synchronization.
+`useCarData()` exposes load, add, update, delete, settings update, and JSON import. Persistence completes before reactive state changes, then widget synchronization runs. Loading is client-only and skipped once the shared loaded flag is true. Widget synchronization is not cloud synchronization.
 
 Changes to these rules require corresponding tests and explicit behavior intent. Existing coverage and gaps are listed in [verification.md](verification.md).

@@ -134,3 +134,8 @@ button { color: inherit; }
 .widget-card { align-items: flex-start; }
 .widget-card > div { flex: 1; }
 .widget-card__message { color: var(--accent-dark) !important; font-weight: 700; }
+
+.history-transfer { margin-bottom: 20px; }
+.history-transfer__actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+.error-message { color: var(--danger); font-size: 13px; line-height: 1.45; }
