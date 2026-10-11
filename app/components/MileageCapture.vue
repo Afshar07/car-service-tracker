@@ -189,7 +189,7 @@ onBeforeUnmount(() => {
         <span class="mileage-field__input"><input ref="mileageInput" v-model="mileageInput" inputmode="numeric" pattern="[0-9]*"> <b>km</b></span>
       </label>
       <p v-if="ocrResult?.mileageCandidate !== undefined" class="helper">
-        {{ ocrResult.method === "seven-segment" ? "Digital display reader" : "OCR" }} confidence:
+        {{ ocrResult.method === "seven-segment" ? "Digital display reader" : ocrResult.method === "mlkit" ? "On-device ML Kit" : "OCR" }} confidence:
         {{ Math.round(ocrResult.confidence) }}%. This is a suggestion—confirm the number before saving.
       </p>
       <details v-if="ocrResult" class="ocr-debug">

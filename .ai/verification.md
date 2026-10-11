@@ -27,6 +27,7 @@ There is no lint script, browser-test script, or root native APK build script. T
 - `tests/mileage.test.ts`: integer/range/previous-reading validation, warnings, service thresholds, history rate/date estimation, missing configuration and fixed-monthly current-mileage estimation.
 - `tests/ocr.test.ts`: candidate extraction, synthetic/real seven-segment decoding, padded crops, narrow digits, incomplete-display rejection and initial-crop suggestions.
 - `tests/unit/utils/image-capture.test.ts`: shared image type/15 MiB validation, explicit native sources, local-only file reads, retries, cancellation and permission-error messages with mocked bridge/fetch. This does not exercise a device camera or browser chooser.
+- `tests/ocr-preprocess.test.ts`, `tests/ocr-engine.test.ts`, `tests/unit/utils/mlkit-ocr.test.ts`: glare helpers, engine fallback order, and the ML Kit bridge with a mocked plugin. ML Kit itself and the browser Tesseract worker are not run in Node.
 - `tests/release-script.test.ts`: version bumping and release-helper safeguards with mocked Git/GitHub commands; tests must never publish a real release.
 - PNG/JPEG pixels are decoded with `pngjs` and `jpeg-js`. These tests do not run the real browser Tesseract worker.
 
@@ -41,6 +42,7 @@ There are no dedicated automated component, real IndexedDB migration, PWA/offlin
 
 - Capture/crop/UI changes: check mobile camera/gallery inputs, preview lifetime, drag/resize in letterboxed images, OCR failure/manual fallback, confirmation, and cancel/reopen.
 - Data/UI changes: export/share JSON with all details, import into a fresh installation, repeat import, reject malformed/conflicting files, check normal update retention and native fresh-database recovery; confirm persistence after reload, newest-first ordering after date edits, neighboring mileage constraints, service-marker baseline changes, and delete confirmation.
+- OCR engine comparison (device/emulator build): photograph or pick `example.jpg` (92615), a red/orange dashboard, and 3+ real photos in varied light. Record ML Kit's result, the browser engine's result (mobile browser/PWA) and the true odometer value for each. ML Kit must be at least as accurate as the browser engine before it stays first in `recognizeOdometer()`. Also confirm fallback with the plugin unavailable and manual entry when no digits are found.
 - PWA changes: use a built production app; cache once online, reload/navigate and run OCR offline, then test update handling without losing readings.
 - Android changes: verify native compilation, snapshot refresh after mutations, retained state while closed, pin support/status, tap-to-open, and overdue rendering on a device/emulator with a suitable launcher.
 - Documentation/context-only changes: verify referenced paths exist, routes are discoverable and ordered, placeholders are removed, and claims match source. Application execution is not required unless source changes.

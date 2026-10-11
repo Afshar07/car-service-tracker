@@ -10,6 +10,7 @@ Native sources under `capacitor/android/app/src/main/java/com/afshar/carservicet
 
 - `MainActivity.kt`: registers `CarWidget` and `MileageBackup` with Capacitor.
 - `MileageBackupPlugin.kt`: atomically stores/reads the on-device history backup and opens the Android share sheet for JSON exports through the existing cache FileProvider.
+- `MlKitOcrPlugin.kt`: `recognize({ image: base64 }) → { text }` using bundled `com.google.mlkit:text-recognition` (about 4 MB, offline; images are decoded with a 2048 px long-edge cap, OutOfMemoryError rejects so the web side falls back; no Play Services model download, no network permission). Registered in `MainActivity.kt`.
 - `CarWidgetPlugin.kt`: persists snapshots, returns widget status, and requests launcher pinning.
 - `CarServiceWidgetProvider.kt`: renders the saved state with Android RemoteViews and opens the app when tapped.
 

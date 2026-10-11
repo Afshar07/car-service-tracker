@@ -7,6 +7,7 @@ class MainActivity : BridgeActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         registerPlugin(CarWidgetPlugin::class.java)
         registerPlugin(MileageBackupPlugin::class.java)
+        registerPlugin(MlKitOcrPlugin::class.java)
         super.onCreate(savedInstanceState)
     }
 }

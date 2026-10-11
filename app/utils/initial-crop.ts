@@ -13,6 +13,24 @@ interface IRun {
   bottom: number;
 }
 
+interface INeutralWindow {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+  /** Score per digit run; the wide window favors longer groups because narrow glyphs such as "1" break spacing regularity. */
+  runWeight: number;
+}
+
+interface INeutralCandidate {
+  bounds: ICropBounds;
+  score: number;
+  digitCount: number;
+}
+
+const NARROW_NEUTRAL_WINDOW: INeutralWindow = { left: 0.38, right: 0.64, top: 0.5, bottom: 0.9, runWeight: 2 };
+const WIDE_NEUTRAL_WINDOW: INeutralWindow = { left: 0.45, right: 0.82, top: 0.45, bottom: 0.8, runWeight: 8 };
+
 function isDisplayPixel(data: Uint8ClampedArray, index: number): boolean {
   const red = data[index] ?? 0;
   const green = data[index + 1] ?? 0;
@@ -154,11 +172,14 @@ function suggestRedCrop(image: IRgbaImage): ICropBounds | undefined {
 }
 
 /** Finds a regular neutral/white LCD digit row when no red display is present. */
-function suggestNeutralCrop(image: IRgbaImage): ICropBounds | undefined {
-  const left = Math.floor(image.width * 0.38);
-  const right = Math.ceil(image.width * 0.64);
-  const top = Math.floor(image.height * 0.5);
-  const bottom = Math.ceil(image.height * 0.9);
+function suggestNeutralCrop(
+  image: IRgbaImage,
+  window: INeutralWindow,
+): INeutralCandidate | undefined {
+  const left = Math.floor(image.width * window.left);
+  const right = Math.ceil(image.width * window.right);
+  const top = Math.floor(image.height * window.top);
+  const bottom = Math.ceil(image.height * window.bottom);
   const bandHeight = Math.max(18, Math.round(image.width * 0.065));
   let best: { runs: IRun[]; score: number } | undefined;
 
@@ -200,7 +221,7 @@ function suggestNeutralCrop(image: IRgbaImage): ICropBounds | undefined {
         const lowerRowBonus = bandTop / image.height * 100;
         const groupCenter = (group[0]!.start + group[group.length - 1]!.end) / 2;
         const centerPenalty = Math.abs(groupCenter / image.width - 0.5) * 100;
-        const score = group.length * 2 + lowerRowBonus - centerPenalty - widthSpread * 5 -
+        const score = group.length * window.runWeight + lowerRowBonus - centerPenalty - widthSpread * 5 -
           alignmentPenalty * 5 - gapVariation * 5;
         if (!best || score > best.score) best = { runs: group, score };
       }
@@ -224,17 +245,27 @@ function suggestNeutralCrop(image: IRgbaImage): ICropBounds | undefined {
   const cropRight = Math.min(image.width, digitRight + horizontalPadding);
   const cropBottom = Math.min(image.height, digitBottom + verticalPadding);
   return {
-    xPercent: cropLeft / image.width * 100,
-    yPercent: cropTop / image.height * 100,
-    widthPercent: (cropRight - cropLeft) / image.width * 100,
-    heightPercent: (cropBottom - cropTop) / image.height * 100,
+    bounds: {
+      xPercent: cropLeft / image.width * 100,
+      yPercent: cropTop / image.height * 100,
+      widthPercent: (cropRight - cropLeft) / image.width * 100,
+      heightPercent: (cropBottom - cropTop) / image.height * 100,
+    },
+    score: best.score,
+    digitCount: digitRuns.length,
   };
 }
 
 export function suggestInitialCrop(image: IRgbaImage): ICropBounds | undefined {
   if (image.width < 80 || image.height < 40 || image.data.length < image.width * image.height * 4) return undefined;
   const redCrop = suggestRedCrop(image);
-  const neutralCrop = suggestNeutralCrop(image);
+  const narrow = suggestNeutralCrop(image, NARROW_NEUTRAL_WINDOW);
+  const wide = suggestNeutralCrop(image, WIDE_NEUTRAL_WINDOW);
+  // Gauge rims and needles can outscore the digits in the narrow window; a longer
+  // regular digit group is the stronger odometer signal, with score as the tie-break.
+  const neutral = wide && (!narrow || wide.digitCount > narrow.digitCount ||
+    (wide.digitCount === narrow.digitCount && wide.score > narrow.score)) ? wide : narrow;
+  const neutralCrop = neutral?.bounds;
   if (redCrop && neutralCrop && redCrop.yPercent < 60 && neutralCrop.yPercent > 55) return neutralCrop;
   return redCrop ?? neutralCrop;
 }

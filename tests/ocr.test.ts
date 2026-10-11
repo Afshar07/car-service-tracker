@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import jpeg from "jpeg-js";
 import { PNG } from "pngjs";
-import { extractMileageCandidate } from "~/utils/odometer-ocr.client";
+import { extractMileageCandidate, getOcrEngines, recognizeWithBrowser, recognizeWithSevenSegment } from "~/utils/odometer-ocr.client";
+import { extractMlKitMileage } from "~/utils/mileage-text";
+import { recognizeWithMlKit } from "~/utils/mlkit-ocr.client";
 import { decodeSevenSegmentImage } from "~/utils/seven-segment-ocr";
 import { suggestInitialCrop } from "~/utils/initial-crop";
 
@@ -28,6 +30,7 @@ const paddedOdometerFixtureCrops: IFixtureCrop[] = [
 const neutralOdometerTargets: Record<string, IFixtureCrop> = {
   "81525.png": { x: 760, y: 600, width: 180, height: 65 },
   "139504.png": { x: 785, y: 705, width: 155, height: 55 },
+  "92615.jpg": { x: 772, y: 618, width: 146, height: 42 },
 };
 
 function readFixtureCrop(crop: IFixtureCrop) {
@@ -222,7 +225,7 @@ describe("suggestInitialCrop", () => {
     expect(suggestInitialCrop({ data: new Uint8ClampedArray(320 * 240 * 4), width: 320, height: 240 })).toBeUndefined();
   });
 
-  it.each(["170370.jpg", "168240.png", "172940.png", "523940.png", "58370.png", "81525.png", "139504.png"])("finds the mileage row in %s", (fixture) => {
+  it.each(["170370.jpg", "168240.png", "172940.png", "523940.png", "58370.png", "81525.png", "139504.png", "92615.jpg"])("finds the mileage row in %s", (fixture) => {
     const source = fixture.endsWith("jpg")
       ? jpeg.decode(readFileSync(new URL(`./fixtures/odometer-${fixture}`, import.meta.url)), { useTArray: true })
       : PNG.sync.read(readFileSync(new URL(`./fixtures/odometer-${fixture}`, import.meta.url)));
@@ -266,5 +269,46 @@ describe("suggestInitialCrop", () => {
       data[targetIndex + 3] = 255;
     }
     expect(decodeSevenSegmentImage({ data, width, height })?.text).toBe(fixture.split(".")[0]);
+  });
+  it("keeps the 92615 crop below the temperature row", () => {
+    const source = jpeg.decode(readFileSync(new URL("./fixtures/odometer-92615.jpg", import.meta.url)), { useTArray: true });
+    const width = Math.min(720, source.width);
+    const height = Math.round(source.height * width / source.width);
+    const data = new Uint8ClampedArray(width * height * 4);
+    for (let row = 0; row < height; row += 1) for (let column = 0; column < width; column += 1) {
+      const s = (Math.floor(row * source.height / height) * source.width + Math.floor(column * source.width / width)) * 4;
+      data.set([source.data[s]!, source.data[s + 1]!, source.data[s + 2]!, 255], (row * width + column) * 4);
+    }
+    const crop = suggestInitialCrop({ data, width, height })!;
+    expect(crop.yPercent).toBeGreaterThan(54);
+    expect(crop.yPercent + crop.heightPercent).toBeLessThan(66);
+  });
+});
+
+describe("extractMlKitMileage", () => {
+  it.each([
+    ["km/h\n20 40 60\nODO 92615", 92615],
+    ["1 2 3 4 5 6\n92615", 92615],
+    ["92,615 km", 92615],
+    ["ODO 92615 km\n26°C", 92615],
+  ])("reads %j as %s", (text, expected) => {
+    expect(extractMlKitMileage(text)).toBe(expected);
+  });
+
+  it.each(["0 20 40", "26°C", "", "AVERAGE 9.9 km/L"])("finds no mileage in %j", (text) => {
+    expect(extractMlKitMileage(text)).toBeUndefined();
+  });
+
+  it("prefers the line that mentions ODO or km over a longer unrelated number", () => {
+    expect(extractMlKitMileage("1234567\nODO 92615 km")).toBe(92615);
+  });
+});
+
+describe("getOcrEngines", () => {
+  it("runs the seven-segment reader before ML Kit on Android", () => {
+    expect(getOcrEngines(true)).toEqual([recognizeWithSevenSegment, recognizeWithMlKit, recognizeWithBrowser]);
+  });
+  it("uses only the browser engine without a native plugin", () => {
+    expect(getOcrEngines(false)).toEqual([recognizeWithBrowser]);
   });
 });
